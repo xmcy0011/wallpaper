@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../services/auth_service.dart';
+import '../viewmodels/login_viewmodel.dart';
 
 /// 登录引导页面
 class LoginGuidePage extends StatefulWidget {
@@ -10,22 +10,38 @@ class LoginGuidePage extends StatefulWidget {
 }
 
 class _LoginGuidePageState extends State<LoginGuidePage> {
-  final _authService = AuthService();
+  late LoginViewModel _viewModel;
   final _usernameController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
   @override
+  void initState() {
+    super.initState();
+    _viewModel = LoginViewModel();
+    _usernameController.addListener(() {
+      _viewModel.setUsername(_usernameController.text);
+    });
+  }
+
+  @override
   void dispose() {
     _usernameController.dispose();
+    _viewModel.dispose();
     super.dispose();
   }
 
   Future<void> _handleLogin() async {
     if (_formKey.currentState!.validate()) {
-      final username = _usernameController.text.trim();
-      await _authService.login(username);
-      if (mounted) {
+      final success = await _viewModel.login();
+      if (success && mounted) {
         Navigator.of(context).pop();
+      } else if (_viewModel.hasError) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_viewModel.errorMessage ?? '登录失败'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     }
   }
@@ -137,6 +153,7 @@ class _LoginGuidePageState extends State<LoginGuidePage> {
                                 width: 2,
                               ),
                             ),
+                            errorText: _viewModel.hasError ? _viewModel.errorMessage : null,
                           ),
                           validator: (value) {
                             if (value == null || value.trim().isEmpty) {

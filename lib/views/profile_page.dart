@@ -1,14 +1,31 @@
 import 'package:flutter/material.dart';
-import '../services/auth_service.dart';
+import '../viewmodels/profile_viewmodel.dart';
 
 /// 个人中心页面
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
 
   @override
+  State<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage> {
+  late ProfileViewModel _viewModel;
+
+  @override
+  void initState() {
+    super.initState();
+    _viewModel = ProfileViewModel();
+  }
+
+  @override
+  void dispose() {
+    _viewModel.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final authService = AuthService();
-    
     return Scaffold(
       backgroundColor: const Color(0xff1a1a1a),
       appBar: AppBar(
@@ -25,7 +42,7 @@ class ProfilePage extends StatelessWidget {
         centerTitle: true,
       ),
       body: AnimatedBuilder(
-        animation: authService,
+        animation: _viewModel,
         builder: (context, _) {
           return SingleChildScrollView(
             child: Column(
@@ -58,10 +75,10 @@ class ProfilePage extends StatelessWidget {
                             width: 3,
                           ),
                         ),
-                        child: authService.userAvatar != null
+                        child: _viewModel.userAvatar != null
                             ? ClipOval(
                                 child: Image.network(
-                                  authService.userAvatar!,
+                                  _viewModel.userAvatar!,
                                   fit: BoxFit.cover,
                                   errorBuilder: (context, error, stackTrace) {
                                     return const Icon(
@@ -82,7 +99,7 @@ class ProfilePage extends StatelessWidget {
                       
                       // 用户名
                       Text(
-                        authService.userName ?? '未登录',
+                        _viewModel.userName ?? '未登录',
                         style: const TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -98,22 +115,22 @@ class ProfilePage extends StatelessWidget {
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: authService.isLoggedIn
+                          color: _viewModel.isLoggedIn
                               ? Colors.green.withOpacity(0.2)
                               : Colors.grey.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: authService.isLoggedIn
+                            color: _viewModel.isLoggedIn
                                 ? Colors.green
                                 : Colors.grey,
                             width: 1,
                           ),
                         ),
                         child: Text(
-                          authService.isLoggedIn ? '已登录' : '未登录',
+                          _viewModel.isLoggedIn ? '已登录' : '未登录',
                           style: TextStyle(
                             fontSize: 12,
-                            color: authService.isLoggedIn
+                            color: _viewModel.isLoggedIn
                                 ? Colors.green
                                 : Colors.grey,
                           ),
@@ -226,7 +243,7 @@ class ProfilePage extends StatelessWidget {
                 const SizedBox(height: 24),
                 
                 // 登出按钮
-                if (authService.isLoggedIn)
+                if (_viewModel.isLoggedIn)
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: SizedBox(
@@ -262,7 +279,7 @@ class ProfilePage extends StatelessWidget {
                           );
                           
                           if (confirm == true) {
-                            await authService.logout();
+                            await _viewModel.logout();
                             if (context.mounted) {
                               Navigator.of(context).pop();
                             }

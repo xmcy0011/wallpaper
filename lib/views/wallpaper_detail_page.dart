@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'dart:async';
+import '../viewmodels/wallpaper_detail_viewmodel.dart';
+import '../models/wallpaper_model.dart';
 import '../services/auth_service.dart';
 
 /// 壁纸详情页面
@@ -30,75 +31,29 @@ class WallpaperDetailPage extends StatefulWidget {
 }
 
 class _WallpaperDetailPageState extends State<WallpaperDetailPage> {
-  bool _isPlaying = false;
-  bool _isMuted = false;
-  bool _isFullscreen = false;
-  Duration _currentPosition = Duration.zero;
-  Duration _totalDuration = const Duration(seconds: 10); // 10秒预览限制
-  Timer? _timer;
+  late WallpaperDetailViewModel _viewModel;
 
   @override
   void initState() {
     super.initState();
-    _startPreviewTimer();
+    _viewModel = WallpaperDetailViewModel(
+      wallpaper: WallpaperModel(
+        wallpaperId: widget.wallpaperId,
+        title: widget.title,
+        imageUrl: widget.imageUrl,
+        color: widget.color,
+        creatorName: widget.creatorName,
+        creatorAvatar: widget.creatorAvatar,
+        isVip: widget.isVip,
+        isSvip: widget.isSvip,
+      ),
+    );
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
+    _viewModel.dispose();
     super.dispose();
-  }
-
-  void _startPreviewTimer() {
-    _timer = Timer.periodic(const Duration(milliseconds: 100), (timer) {
-      if (_isPlaying && _currentPosition < _totalDuration) {
-        setState(() {
-          _currentPosition = Duration(
-            milliseconds: _currentPosition.inMilliseconds + 100,
-          );
-        });
-      } else if (_currentPosition >= _totalDuration) {
-        _pause();
-      }
-    });
-  }
-
-  void _play() {
-    if (_currentPosition >= _totalDuration) {
-      setState(() {
-        _currentPosition = Duration.zero;
-      });
-    }
-    setState(() {
-      _isPlaying = true;
-    });
-  }
-
-  void _pause() {
-    setState(() {
-      _isPlaying = false;
-    });
-  }
-
-  void _togglePlayPause() {
-    if (_isPlaying) {
-      _pause();
-    } else {
-      _play();
-    }
-  }
-
-  void _toggleMute() {
-    setState(() {
-      _isMuted = !_isMuted;
-    });
-  }
-
-  String _formatDuration(Duration duration) {
-    String twoDigits(int n) => n.toString().padLeft(2, '0');
-    final minutes = twoDigits(duration.inMinutes.remainder(60));
-    final seconds = twoDigits(duration.inSeconds.remainder(60));
-    return '$minutes:$seconds';
   }
 
   @override
@@ -259,273 +214,275 @@ class _WallpaperDetailPageState extends State<WallpaperDetailPage> {
 
   // 壁纸预览区域（视频播放器）
   Widget _buildWallpaperPreview() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // 顶部操作栏
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return AnimatedBuilder(
+      animation: _viewModel,
+      builder: (context, _) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 返回按钮
-            TextButton.icon(
-              onPressed: () => Navigator.of(context).pop(),
-              icon: const Icon(Icons.arrow_back, color: Colors.white, size: 18),
-              label: const Text(
-                '返回',
-                style: TextStyle(color: Colors.white, fontSize: 14),
-              ),
-            ),
-            // 扫码下载按钮
-            TextButton.icon(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('扫码下载功能开发中')),
-                );
-              },
-              icon: const Icon(Icons.qr_code, color: Colors.white, size: 18),
-              label: const Text(
-                '扫码下载手机壁纸',
-                style: TextStyle(color: Colors.white, fontSize: 14),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        // 预览提示
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          decoration: BoxDecoration(
-            color: const Color(0xff2a2a2a),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(4),
+            // 顶部操作栏
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // 返回按钮
+                TextButton.icon(
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(Icons.arrow_back, color: Colors.white, size: 18),
+                  label: const Text(
+                    '返回',
+                    style: TextStyle(color: Colors.white, fontSize: 14),
+                  ),
                 ),
-                child: const Icon(Icons.info_outline, color: Colors.white, size: 16),
-              ),
-              const SizedBox(width: 8),
-              const Text(
-                '壁纸仅预览10秒,下载后应用完整视频。',
-                style: TextStyle(color: Colors.white, fontSize: 12),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-        // 视频播放器
-        Container(
-          height: 600,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            color: const Color(0xff2a2a2a),
-          ),
-          child: Stack(
-            children: [
-              // 视频内容（使用图片模拟）
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    Image.network(
-                      widget.imageUrl,
-                      width: double.infinity,
-                      height: double.infinity,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                widget.color,
-                                widget.color.withOpacity(0.6),
-                              ],
-                            ),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        );
-                      },
-                    ),
-                    // 播放状态覆盖层
-                    if (!_isPlaying)
-                      Container(
-                        color: Colors.black.withOpacity(0.3),
-                        child: Center(
-                          child: IconButton(
-                            icon: Container(
-                              padding: const EdgeInsets.all(20),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.2),
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.play_arrow,
-                                color: Colors.white,
-                                size: 60,
-                              ),
-                            ),
-                            onPressed: _togglePlayPause,
-                          ),
-                        ),
-                      ),
-                  ],
+                // 扫码下载按钮
+                TextButton.icon(
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('扫码下载功能开发中')),
+                    );
+                  },
+                  icon: const Icon(Icons.qr_code, color: Colors.white, size: 18),
+                  label: const Text(
+                    '扫码下载手机壁纸',
+                    style: TextStyle(color: Colors.white, fontSize: 14),
+                  ),
                 ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            // 预览提示
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xff2a2a2a),
+                borderRadius: BorderRadius.circular(8),
               ),
-              // SVIP标签
-              if (widget.isSvip)
-                Positioned(
-                  top: 16,
-                  right: 16,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
-                      ),
-                      borderRadius: BorderRadius.circular(20),
+                      color: Colors.white.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(4),
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: const [
-                        Icon(Icons.star, size: 14, color: Colors.white),
-                        SizedBox(width: 4),
-                        Text(
-                          'SVIP',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
+                    child: const Icon(Icons.info_outline, color: Colors.white, size: 16),
+                  ),
+                  const SizedBox(width: 8),
+                  const Text(
+                    '壁纸仅预览10秒,下载后应用完整视频。',
+                    style: TextStyle(color: Colors.white, fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            // 视频播放器
+            Container(
+              height: 600,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                color: const Color(0xff2a2a2a),
+              ),
+              child: Stack(
+                children: [
+                  // 视频内容（使用图片模拟）
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        Image.network(
+                          widget.imageUrl,
+                          width: double.infinity,
+                          height: double.infinity,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    widget.color,
+                                    widget.color.withOpacity(0.6),
+                                  ],
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            );
+                          },
                         ),
+                        // 播放状态覆盖层
+                        if (!_viewModel.isPlaying)
+                          Container(
+                            color: Colors.black.withOpacity(0.3),
+                            child: Center(
+                              child: IconButton(
+                                icon: Container(
+                                  padding: const EdgeInsets.all(20),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.2),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.play_arrow,
+                                    color: Colors.white,
+                                    size: 60,
+                                  ),
+                                ),
+                                onPressed: _viewModel.togglePlayPause,
+                              ),
+                            ),
+                          ),
                       ],
                     ),
                   ),
-                ),
-              // 播放控制栏
-              Positioned(
-                bottom: 0,
-                left: 0,
-                right: 0,
-                child: _buildVideoControls(),
+                  // SVIP标签
+                  if (widget.isSvip)
+                    Positioned(
+                      top: 16,
+                      right: 16,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
+                          ),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: const [
+                            Icon(Icons.star, size: 14, color: Colors.white),
+                            SizedBox(width: 4),
+                            Text(
+                              'SVIP',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  // 播放控制栏
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: _buildVideoControls(),
+                  ),
+                ],
               ),
-            ],
-          ),
-        ),
-      ],
+            ),
+          ],
+        );
+      },
     );
   }
 
   // 视频播放控制栏
   Widget _buildVideoControls() {
-    final progress = _currentPosition.inMilliseconds / _totalDuration.inMilliseconds;
-    
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Colors.transparent,
-            Colors.black.withOpacity(0.8),
-          ],
-        ),
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(12),
-          bottomRight: Radius.circular(12),
-        ),
-      ),
-      child: Row(
-        children: [
-          // 播放/暂停按钮
-          IconButton(
-            icon: Icon(
-              _isPlaying ? Icons.pause : Icons.play_arrow,
-              color: Colors.white,
-              size: 24,
+    return AnimatedBuilder(
+      animation: _viewModel,
+      builder: (context, _) {
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Colors.transparent,
+                Colors.black.withOpacity(0.8),
+              ],
             ),
-            onPressed: _togglePlayPause,
-          ),
-          const SizedBox(width: 8),
-          // 静音按钮
-          IconButton(
-            icon: Icon(
-              _isMuted ? Icons.volume_off : Icons.volume_up,
-              color: Colors.white,
-              size: 20,
-            ),
-            onPressed: _toggleMute,
-          ),
-          const SizedBox(width: 8),
-          // 时间显示
-          Text(
-            '${_formatDuration(_currentPosition)} / ${_formatDuration(_totalDuration)}',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 12,
+            borderRadius: const BorderRadius.only(
+              bottomLeft: Radius.circular(12),
+              bottomRight: Radius.circular(12),
             ),
           ),
-          const SizedBox(width: 12),
-          // 进度条
-          Expanded(
-            child: SliderTheme(
-              data: SliderTheme.of(context).copyWith(
-                activeTrackColor: Colors.blue,
-                inactiveTrackColor: Colors.white.withOpacity(0.3),
-                thumbColor: Colors.white,
-                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-                trackHeight: 4,
-                overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
-              ),
-              child: Slider(
-                value: progress.clamp(0.0, 1.0),
-                onChanged: (value) {
-                  setState(() {
-                    _currentPosition = Duration(
-                      milliseconds: (value * _totalDuration.inMilliseconds).round(),
-                    );
-                  });
-                },
-                onChangeStart: (_) {
-                  _pause();
-                },
-                onChangeEnd: (_) {
-                  if (_currentPosition < _totalDuration) {
-                    _play();
-                  }
-                },
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          // 全屏按钮
-          IconButton(
-            icon: Icon(
-              _isFullscreen ? Icons.fullscreen_exit : Icons.fullscreen,
-              color: Colors.white,
-              size: 20,
-            ),
-            onPressed: () {
-              setState(() {
-                _isFullscreen = !_isFullscreen;
-              });
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(_isFullscreen ? '退出全屏' : '进入全屏'),
-                  duration: const Duration(seconds: 1),
+          child: Row(
+            children: [
+              // 播放/暂停按钮
+              IconButton(
+                icon: Icon(
+                  _viewModel.isPlaying ? Icons.pause : Icons.play_arrow,
+                  color: Colors.white,
+                  size: 24,
                 ),
-              );
-            },
+                onPressed: _viewModel.togglePlayPause,
+              ),
+              const SizedBox(width: 8),
+              // 静音按钮
+              IconButton(
+                icon: Icon(
+                  _viewModel.isMuted ? Icons.volume_off : Icons.volume_up,
+                  color: Colors.white,
+                  size: 20,
+                ),
+                onPressed: _viewModel.toggleMute,
+              ),
+              const SizedBox(width: 8),
+              // 时间显示
+              Text(
+                '${_viewModel.formatDuration(_viewModel.currentPosition)} / ${_viewModel.formatDuration(_viewModel.totalDuration)}',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                ),
+              ),
+              const SizedBox(width: 12),
+              // 进度条
+              Expanded(
+                child: SliderTheme(
+                  data: SliderTheme.of(context).copyWith(
+                    activeTrackColor: Colors.blue,
+                    inactiveTrackColor: Colors.white.withOpacity(0.3),
+                    thumbColor: Colors.white,
+                    thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                    trackHeight: 4,
+                    overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
+                  ),
+                  child: Slider(
+                    value: _viewModel.progress.clamp(0.0, 1.0),
+                    onChanged: (value) {
+                      _viewModel.seekTo(value);
+                    },
+                    onChangeStart: (_) {
+                      _viewModel.pause();
+                    },
+                    onChangeEnd: (_) {
+                      if (_viewModel.currentPosition < _viewModel.totalDuration) {
+                        _viewModel.play();
+                      }
+                    },
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              // 全屏按钮
+              IconButton(
+                icon: Icon(
+                  _viewModel.isFullscreen ? Icons.fullscreen_exit : Icons.fullscreen,
+                  color: Colors.white,
+                  size: 20,
+                ),
+                onPressed: () {
+                  _viewModel.toggleFullscreen();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(_viewModel.isFullscreen ? '退出全屏' : '进入全屏'),
+                      duration: const Duration(seconds: 1),
+                    ),
+                  );
+                },
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -925,20 +882,5 @@ class _WallpaperDetailPageState extends State<WallpaperDetailPage> {
       ),
     );
   }
-}
-
-// 推荐项数据模型
-class RecommendationItem {
-  final String title;
-  final String imageUrl;
-  final Color color;
-  final bool isVip;
-
-  RecommendationItem({
-    required this.title,
-    required this.imageUrl,
-    required this.color,
-    this.isVip = false,
-  });
 }
 

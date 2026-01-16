@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../viewmodels/home_viewmodel.dart';
 import '../services/auth_service.dart';
 import 'login_guide.dart';
 import 'profile_page.dart';
@@ -14,124 +15,22 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateMixin {
-  final _authService = AuthService();
-  final PageController _carouselController = PageController();
-  int _currentCarouselIndex = 0;
+  late HomeViewModel _viewModel;
   late TabController _tabController;
-  bool _showLoginBanner = true;
-
-  // 轮播图数据
-  final List<CarouselItem> _carouselItems = [
-    CarouselItem(
-      title: '特色壁纸1',
-      imageUrl: 'https://picsum.photos/800/450?random=1',
-      color: Colors.blue,
-    ),
-    CarouselItem(
-      title: '特色壁纸2',
-      imageUrl: 'https://picsum.photos/800/450?random=2',
-      color: Colors.purple,
-    ),
-    CarouselItem(
-      title: '特色壁纸3',
-      imageUrl: 'https://picsum.photos/800/450?random=3',
-      color: Colors.pink,
-    ),
-    CarouselItem(
-      title: '特色壁纸4',
-      imageUrl: 'https://picsum.photos/800/450?random=4',
-      color: Colors.orange,
-    ),
-    CarouselItem(
-      title: '特色壁纸5',
-      imageUrl: 'https://picsum.photos/800/450?random=5',
-      color: Colors.teal,
-    ),
-  ];
-
-  // 推荐侧边栏图片
-  final List<RecommendationItem> _recommendations = [
-    RecommendationItem(
-      title: '罗小黑-雪山旅者',
-      imageUrl: 'https://picsum.photos/300/200?random=10',
-      color: Colors.blue,
-      isVip: false,
-    ),
-    RecommendationItem(
-      title: '伊蕾娜',
-      imageUrl: 'https://picsum.photos/300/200?random=11',
-      color: Colors.purple,
-      isVip: true,
-    ),
-  ];
-
-  // 推荐列表
-  final List<String> _recommendationList = [
-    '入冬啦',
-    '一起去抓水母吧!',
-    '美少女拯救世界',
-    '随时间变化',
-  ];
-
-  // 热门壁纸
-  final List<HotWallpaperItem> _hotWallpapers = [
-    HotWallpaperItem(
-      title: '热门壁纸1',
-      imageUrl: 'https://picsum.photos/300/200?random=20',
-      color: Colors.indigo,
-      isSvip: true,
-    ),
-    HotWallpaperItem(
-      title: '热门壁纸2',
-      imageUrl: 'https://picsum.photos/300/200?random=21',
-      color: Colors.red,
-      isSvip: true,
-    ),
-    HotWallpaperItem(
-      title: '热门壁纸3',
-      imageUrl: 'https://picsum.photos/300/200?random=22',
-      color: Colors.deepPurple,
-      isSvip: true,
-    ),
-  ];
+  final _authService = AuthService();
 
   @override
   void initState() {
     super.initState();
+    _viewModel = HomeViewModel();
     _tabController = TabController(length: 4, vsync: this);
-    _authService.addListener(_onAuthStateChanged);
-    // 自动轮播
-    _startCarouselAutoPlay();
   }
 
   @override
   void dispose() {
-    _carouselController.dispose();
     _tabController.dispose();
-    _authService.removeListener(_onAuthStateChanged);
+    _viewModel.dispose();
     super.dispose();
-  }
-
-  void _onAuthStateChanged() {
-    setState(() {});
-  }
-
-  void _startCarouselAutoPlay() {
-    Future.delayed(const Duration(seconds: 3), () {
-      if (mounted && _carouselController.hasClients) {
-        if (_currentCarouselIndex < _carouselItems.length - 1) {
-          _currentCarouselIndex++;
-        } else {
-          _currentCarouselIndex = 0;
-        }
-        _carouselController.animateToPage(
-          _currentCarouselIndex,
-          duration: const Duration(milliseconds: 500),
-          curve: Curves.easeInOut,
-        );
-        _startCarouselAutoPlay();
-      }
-    });
   }
 
   void _openLoginGuide() {
@@ -154,31 +53,36 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xff1a1a1a),
-      body: Column(
-        children: [
-          // 顶部导航栏
-          _buildTopBar(),
-          
-          // 主内容区域
-          Expanded(
-            child: SingleChildScrollView(
-              child: Column(
-                children: [
-                  // 主内容区（登录横幅 + 轮播图 + 推荐栏）
-                  _buildMainContent(),
-                  
-                  // 热门壁纸区域
-                  _buildHotWallpapersSection(),
-                  
-                  const SizedBox(height: 80), // 为底部播放器留空间
-                ],
+      body: AnimatedBuilder(
+        animation: _viewModel,
+        builder: (context, _) {
+          return Column(
+            children: [
+              // 顶部导航栏
+              _buildTopBar(),
+              
+              // 主内容区域
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      // 主内容区（登录横幅 + 轮播图 + 推荐栏）
+                      _buildMainContent(),
+                      
+                      // 热门壁纸区域
+                      _buildHotWallpapersSection(),
+                      
+                      const SizedBox(height: 80), // 为底部播放器留空间
+                    ],
+                  ),
+                ),
               ),
-            ),
-          ),
-          
-          // 底部媒体播放器控制栏
-          _buildMediaPlayerBar(),
-        ],
+              
+              // 底部媒体播放器控制栏
+              _buildMediaPlayerBar(),
+            ],
+          );
+        },
       ),
     );
   }
@@ -391,7 +295,7 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // 左侧：登录横幅
-          if (!_authService.isLoggedIn && _showLoginBanner)
+          if (!_viewModel.isLoggedIn && _viewModel.showLoginBanner)
             Container(
               width: 200,
               margin: const EdgeInsets.only(right: 16),
@@ -461,9 +365,7 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
             child: IconButton(
               icon: const Icon(Icons.close, color: Colors.white, size: 18),
               onPressed: () {
-                setState(() {
-                  _showLoginBanner = false;
-                });
+                _viewModel.hideLoginBanner();
               },
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),
@@ -486,15 +388,13 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
         children: [
           // 轮播内容
           PageView.builder(
-            controller: _carouselController,
+            controller: _viewModel.carouselController,
             onPageChanged: (index) {
-              setState(() {
-                _currentCarouselIndex = index;
-              });
+              _viewModel.updateCarouselIndex(index);
             },
-            itemCount: _carouselItems.length,
+            itemCount: _viewModel.carouselItems.length,
             itemBuilder: (context, index) {
-              final item = _carouselItems[index];
+              final item = _viewModel.carouselItems[index];
               return InkWell(
                 onTap: () {
                   Navigator.of(context).push(
@@ -587,14 +487,7 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
                   ),
                   child: const Icon(Icons.chevron_left, color: Colors.white),
                 ),
-                onPressed: () {
-                  if (_currentCarouselIndex > 0) {
-                    _carouselController.previousPage(
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeInOut,
-                    );
-                  }
-                },
+                onPressed: _viewModel.previousCarouselPage,
               ),
             ),
           ),
@@ -612,14 +505,7 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
                   ),
                   child: const Icon(Icons.chevron_right, color: Colors.white),
                 ),
-                onPressed: () {
-                  if (_currentCarouselIndex < _carouselItems.length - 1) {
-                    _carouselController.nextPage(
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeInOut,
-                    );
-                  }
-                },
+                onPressed: _viewModel.nextCarouselPage,
               ),
             ),
           ),
@@ -632,14 +518,14 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(
-                _carouselItems.length,
+                _viewModel.carouselItems.length,
                 (index) => Container(
                   width: 8,
                   height: 8,
                   margin: const EdgeInsets.symmetric(horizontal: 4),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: _currentCarouselIndex == index
+                    color: _viewModel.currentCarouselIndex == index
                         ? Colors.white
                         : Colors.white.withOpacity(0.3),
                   ),
@@ -658,7 +544,7 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // 推荐图片预览
-        ..._recommendations.map((item) => Container(
+        ..._viewModel.recommendations.map((item) => Container(
           margin: const EdgeInsets.only(bottom: 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -674,7 +560,7 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
               const SizedBox(height: 8),
               InkWell(
                 onTap: () {
-                  final index = _recommendations.indexOf(item);
+                  final index = _viewModel.recommendations.indexOf(item);
                   Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (context) => WallpaperDetailPage(
@@ -760,7 +646,7 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
                 ),
               ),
               const SizedBox(height: 12),
-              ..._recommendationList.map((text) => Padding(
+              ..._viewModel.recommendationList.map((text) => Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: InkWell(
                   onTap: () {
@@ -820,12 +706,12 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
           ),
           const SizedBox(height: 16),
           Row(
-            children: _hotWallpapers.map((item) => Expanded(
+            children: _viewModel.hotWallpapers.map((item) => Expanded(
               child: Container(
                 margin: const EdgeInsets.symmetric(horizontal: 8),
                 child: InkWell(
                   onTap: () {
-                    final index = _hotWallpapers.indexOf(item);
+                    final index = _viewModel.hotWallpapers.indexOf(item);
                     Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (context) => WallpaperDetailPage(
@@ -990,43 +876,3 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
   }
 }
 
-// 数据模型
-class CarouselItem {
-  final String title;
-  final String imageUrl;
-  final Color color;
-
-  CarouselItem({
-    required this.title,
-    required this.imageUrl,
-    required this.color,
-  });
-}
-
-class RecommendationItem {
-  final String title;
-  final String imageUrl;
-  final Color color;
-  final bool isVip;
-
-  RecommendationItem({
-    required this.title,
-    required this.imageUrl,
-    required this.color,
-    this.isVip = false,
-  });
-}
-
-class HotWallpaperItem {
-  final String title;
-  final String imageUrl;
-  final Color color;
-  final bool isSvip;
-
-  HotWallpaperItem({
-    required this.title,
-    required this.imageUrl,
-    required this.color,
-    this.isSvip = false,
-  });
-}
