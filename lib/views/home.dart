@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../viewmodels/home_viewmodel.dart';
 import '../services/auth_service.dart';
+import '../widgets/custom_title_bar.dart';
 import 'login_guide.dart';
 import 'profile_page.dart';
 import 'wallpaper_detail_page.dart';
@@ -14,7 +15,8 @@ class MyHomePage extends StatefulWidget {
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateMixin {
+class _MyHomePageState extends State<MyHomePage>
+    with SingleTickerProviderStateMixin {
   late HomeViewModel _viewModel;
   late TabController _tabController;
   final _authService = AuthService();
@@ -34,19 +36,15 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
   }
 
   void _openLoginGuide() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => const LoginGuidePage(),
-      ),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (context) => const LoginGuidePage()));
   }
 
   void _openProfile() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => const ProfilePage(),
-      ),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (context) => const ProfilePage()));
   }
 
   @override
@@ -58,9 +56,11 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
         builder: (context, _) {
           return Column(
             children: [
+              // 自定义标题栏（桌面端：含窗口控制按钮）
+              const CustomTitleBar(title: '壁纸APP', subtitle: '小标题'),
               // 顶部导航栏
               _buildTopBar(),
-              
+
               // 主内容区域
               Expanded(
                 child: SingleChildScrollView(
@@ -68,16 +68,16 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
                     children: [
                       // 主内容区（登录横幅 + 轮播图 + 推荐栏）
                       _buildMainContent(),
-                      
+
                       // 热门壁纸区域
                       _buildHotWallpapersSection(),
-                      
+
                       const SizedBox(height: 80), // 为底部播放器留空间
                     ],
                   ),
                 ),
               ),
-              
+
               // 底部媒体播放器控制栏
               _buildMediaPlayerBar(),
             ],
@@ -95,43 +95,16 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         children: [
-          // Logo和标题
-          Row(
-            children: [
-              const Icon(
-                Icons.wallpaper_rounded,
-                color: Colors.white,
-                size: 28,
-              ),
-              const SizedBox(width: 8),
-              const Text(
-                '壁纸APP',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                '啊噗',
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.6),
-                  fontSize: 14,
-                ),
-              ),
-            ],
-          ),
-          
-          const SizedBox(width: 32),
-          
-          // 导航标签
-          Expanded(
+          // 导航标签（靠左，固定宽度）
+          SizedBox(
+            width: 320,
             child: TabBar(
               controller: _tabController,
               labelColor: Colors.blue,
               unselectedLabelColor: Colors.white.withOpacity(0.6),
               indicatorColor: Colors.blue,
+              dividerColor: Colors.transparent,
+              dividerHeight: 0,
               tabs: const [
                 Tab(text: '推荐'),
                 Tab(text: '资源区'),
@@ -140,147 +113,140 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
               ],
             ),
           ),
-          
-          const SizedBox(width: 16),
-          
-          // 搜索栏
-          Expanded(
-            flex: 2,
-            child: Container(
-              height: 36,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(18),
-              ),
-              child: TextField(
-                style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  hintText: '蜡笔小新',
-                  hintStyle: TextStyle(
-                    color: Colors.white.withOpacity(0.5),
-                    fontSize: 14,
+
+          // 中间留空
+          const Spacer(),
+
+          // 搜索栏、上传、登录（靠右）
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 搜索栏
+              SizedBox(
+                width: 200,
+                child: Container(
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(18),
                   ),
-                  prefixIcon: Icon(
-                    Icons.search,
-                    color: Colors.white.withOpacity(0.5),
-                    size: 20,
-                  ),
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-                ),
-              ),
-            ),
-          ),
-          
-          const SizedBox(width: 12),
-          
-          // 上传按钮
-          Container(
-            height: 36,
-            decoration: BoxDecoration(
-              color: Colors.pink,
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: TextButton.icon(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('上传功能开发中')),
-                );
-              },
-              icon: const Icon(Icons.upload, size: 18, color: Colors.white),
-              label: const Text(
-                '上传',
-                style: TextStyle(color: Colors.white, fontSize: 14),
-              ),
-              style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-              ),
-            ),
-          ),
-          
-          const SizedBox(width: 12),
-          
-          // 手机APP图标
-          IconButton(
-            icon: Icon(Icons.phone_android, color: Colors.white.withOpacity(0.7)),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('手机APP功能开发中')),
-              );
-            },
-          ),
-          
-          // 设置图标
-          IconButton(
-            icon: Icon(Icons.settings, color: Colors.white.withOpacity(0.7)),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('设置功能开发中')),
-              );
-            },
-          ),
-          
-          // 用户信息或登录按钮
-          AnimatedBuilder(
-            animation: _authService,
-            builder: (context, _) {
-              if (_authService.isLoggedIn) {
-                return InkWell(
-                  onTap: _openProfile,
-                  child: Container(
-                    margin: const EdgeInsets.only(left: 8),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 28,
-                          height: 28,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
-                            shape: BoxShape.circle,
-                          ),
-                          child: _authService.userAvatar != null
-                              ? ClipOval(
-                                  child: Image.network(
-                                    _authService.userAvatar!,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) {
-                                      return const Icon(
-                                        Icons.person,
-                                        size: 18,
-                                        color: Colors.white70,
-                                      );
-                                    },
-                                  ),
-                                )
-                              : const Icon(
-                                  Icons.person,
-                                  size: 18,
-                                  color: Colors.white70,
-                                ),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          _authService.userName ?? '用户',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
+                  child: TextField(
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      hintText: '蜡笔小新',
+                      hintStyle: TextStyle(
+                        color: Colors.white.withOpacity(0.5),
+                        fontSize: 14,
+                      ),
+                      prefixIcon: Icon(
+                        Icons.search,
+                        color: Colors.white.withOpacity(0.5),
+                        size: 20,
+                      ),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                      ),
                     ),
                   ),
-                );
-              } else {
-                return TextButton(
-                  onPressed: _openLoginGuide,
-                  child: const Text(
-                    '登录',
+                ),
+              ),
+
+              const SizedBox(width: 12),
+
+              // 上传按钮
+              Container(
+                height: 36,
+                decoration: BoxDecoration(
+                  color: Colors.pink,
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: TextButton.icon(
+                  onPressed: () {
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(const SnackBar(content: Text('上传功能开发中')));
+                  },
+                  icon: const Icon(Icons.upload, size: 18, color: Colors.white),
+                  label: const Text(
+                    '上传',
                     style: TextStyle(color: Colors.white, fontSize: 14),
                   ),
-                );
-              }
-            },
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                  ),
+                ),
+              ),
+
+              const SizedBox(width: 12),
+
+              // 用户信息或登录按钮
+              AnimatedBuilder(
+                animation: _authService,
+                builder: (context, _) {
+                  if (_authService.isLoggedIn) {
+                    return InkWell(
+                      onTap: _openProfile,
+                      child: Container(
+                        margin: const EdgeInsets.only(left: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 28,
+                              height: 28,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.2),
+                                shape: BoxShape.circle,
+                              ),
+                              child: _authService.userAvatar != null
+                                  ? ClipOval(
+                                      child: Image.network(
+                                        _authService.userAvatar!,
+                                        fit: BoxFit.cover,
+                                        errorBuilder:
+                                            (context, error, stackTrace) {
+                                              return const Icon(
+                                                Icons.person,
+                                                size: 18,
+                                                color: Colors.white70,
+                                              );
+                                            },
+                                      ),
+                                    )
+                                  : const Icon(
+                                      Icons.person,
+                                      size: 18,
+                                      color: Colors.white70,
+                                    ),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              _authService.userName ?? '用户',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  } else {
+                    return TextButton(
+                      onPressed: _openLoginGuide,
+                      child: const Text(
+                        '登录',
+                        style: TextStyle(color: Colors.white, fontSize: 14),
+                      ),
+                    );
+                  }
+                },
+              ),
+            ],
           ),
         ],
       ),
@@ -291,30 +257,25 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
   Widget _buildMainContent() {
     return Padding(
       padding: const EdgeInsets.all(16.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
+        clipBehavior: Clip.none,
         children: [
-          // 左侧：登录横幅
+          // 主体：轮播图 + 推荐栏（登录横幅不再占位）
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(flex: 5, child: _buildCarousel()),
+              const SizedBox(width: 16),
+              Expanded(flex: 3, child: _buildRecommendationSidebar()),
+            ],
+          ),
+          // 左侧：登录横幅（悬浮，不挤占轮播图空间）
           if (!_viewModel.isLoggedIn && _viewModel.showLoginBanner)
-            Container(
-              width: 200,
-              margin: const EdgeInsets.only(right: 16),
-              child: _buildLoginBanner(),
+            Positioned(
+              left: 0,
+              top: 0,
+              child: SizedBox(width: 200, child: _buildLoginBanner()),
             ),
-          
-          // 中间：轮播图
-          Expanded(
-            flex: 3,
-            child: _buildCarousel(),
-          ),
-          
-          const SizedBox(width: 16),
-          
-          // 右侧：推荐栏
-          Expanded(
-            flex: 1,
-            child: _buildRecommendationSidebar(),
-          ),
         ],
       ),
     );
@@ -433,45 +394,45 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
                           );
                         },
                       ),
-                    // SVIP标签
-                    Positioned(
-                      top: 16,
-                      right: 16,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
+                      // SVIP标签
+                      Positioned(
+                        top: 16,
+                        right: 16,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
                           ),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: const [
-                            Icon(Icons.star, size: 14, color: Colors.white),
-                            SizedBox(width: 4),
-                            Text(
-                              'SVIP',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
                             ),
-                          ],
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: const [
+                              Icon(Icons.star, size: 14, color: Colors.white),
+                              SizedBox(width: 4),
+                              Text(
+                                'SVIP',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
               );
             },
           ),
-          
+
           // 左右箭头
           Positioned(
             left: 16,
@@ -509,7 +470,7 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
               ),
             ),
           ),
-          
+
           // 指示器
           Positioned(
             bottom: 16,
@@ -538,134 +499,155 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
     );
   }
 
-  // 推荐侧边栏
+  // 推荐侧边栏（左侧分类列表 + 右侧推荐内容，联动）
   Widget _buildRecommendationSidebar() {
-    return Column(
+    return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // 推荐图片预览
-        ..._viewModel.recommendations.map((item) => Container(
-          margin: const EdgeInsets.only(bottom: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                item.title,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(height: 8),
-              InkWell(
-                onTap: () {
-                  final index = _viewModel.recommendations.indexOf(item);
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => WallpaperDetailPage(
-                        wallpaperId: '2001919${200 + index}',
-                        title: item.title,
-                        imageUrl: item.imageUrl,
-                        color: item.color,
-                        creatorName: 'Creator ${index + 1}',
-                        isVip: item.isVip,
-                        isSvip: false,
-                      ),
-                    ),
-                  );
-                },
-                child: Stack(
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.network(
-                        item.imageUrl,
-                        width: double.infinity,
-                        height: 200,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            height: 200,
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  item.color,
-                                  item.color.withOpacity(0.6),
-                                ],
-                              ),
-                              borderRadius: BorderRadius.circular(8),
+        // 右侧：当前分类的推荐内容
+        Expanded(
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: _viewModel.currentRecommendations
+                  .map(
+                    (item) => Container(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item.title,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
                             ),
-                          );
-                        },
-                      ),
-                    ),
-                  if (item.isVip)
-                    Positioned(
-                      top: 8,
-                      right: 8,
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: Colors.amber,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Text(
-                          'V',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
                           ),
-                        ),
+                          const SizedBox(height: 8),
+                          InkWell(
+                            onTap: () {
+                              final list = _viewModel.currentRecommendations;
+                              final idx = list.indexOf(item);
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (context) => WallpaperDetailPage(
+                                    wallpaperId: '2001919${200 + idx}',
+                                    title: item.title,
+                                    imageUrl: item.imageUrl,
+                                    color: item.color,
+                                    creatorName: 'Creator ${idx + 1}',
+                                    isVip: item.isVip,
+                                    isSvip: false,
+                                  ),
+                                ),
+                              );
+                            },
+                            child: Stack(
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Image.network(
+                                    item.imageUrl,
+                                    width: double.infinity,
+                                    height: 200,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Container(
+                                        height: 200,
+                                        decoration: BoxDecoration(
+                                          gradient: LinearGradient(
+                                            colors: [
+                                              item.color,
+                                              item.color.withOpacity(0.6),
+                                            ],
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                                if (item.isVip)
+                                  Positioned(
+                                    top: 8,
+                                    right: 8,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: BoxDecoration(
+                                        color: Colors.amber,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Text(
+                                        'V',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
-                ),
-              ),
-            ],
+                  )
+                  .toList(),
+            ),
           ),
-        )),
-        
-        // 推荐列表
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: const Color(0xff2a2a2a),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                '推荐',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
+        ),
+      const SizedBox(width: 12),
+      // 左侧：推荐分类列表
+      Container(
+        width: 140,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: const Color(0xff2a2a2a),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              '推荐',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
               ),
-              const SizedBox(height: 12),
-              ..._viewModel.recommendationList.map((text) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
+            ),
+            const SizedBox(height: 12),
+            ...List.generate(_viewModel.recommendationList.length, (index) {
+              final text = _viewModel.recommendationList[index];
+              final isSelected =
+                  index == _viewModel.selectedRecommendationIndex;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 10),
                 child: InkWell(
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('点击了: $text')),
-                    );
-                  },
+                  onTap: () => _viewModel.selectRecommendation(index),
                   child: Text(
                     text,
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.8),
-                      fontSize: 14,
+                      color: isSelected
+                          ? Colors.blue
+                          : Colors.white.withOpacity(0.8),
+                      fontSize: 13,
+                      fontWeight: isSelected
+                          ? FontWeight.w600
+                          : FontWeight.normal,
                     ),
                   ),
                 ),
-              )),
-            ],
-          ),
+              );
+            }),
+          ],
         ),
+      ),
       ],
     );
   }
@@ -690,9 +672,9 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
               ),
               TextButton(
                 onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('查看更多功能开发中')),
-                  );
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(const SnackBar(content: Text('查看更多功能开发中')));
                 },
                 child: Text(
                   '更多',
@@ -706,77 +688,84 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
           ),
           const SizedBox(height: 16),
           Row(
-            children: _viewModel.hotWallpapers.map((item) => Expanded(
-              child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 8),
-                child: InkWell(
-                  onTap: () {
-                    final index = _viewModel.hotWallpapers.indexOf(item);
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => WallpaperDetailPage(
-                          wallpaperId: '2001919${300 + index}',
-                          title: item.title,
-                          imageUrl: item.imageUrl,
-                          color: item.color,
-                          creatorName: 'Creator ${index + 1}',
-                          isSvip: item.isSvip,
-                        ),
-                      ),
-                    );
-                  },
-                  child: Stack(
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: Image.network(
-                          item.imageUrl,
-                          width: double.infinity,
-                          height: 200,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              height: 200,
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [
-                                    item.color,
-                                    item.color.withOpacity(0.6),
-                                  ],
-                                ),
-                                borderRadius: BorderRadius.circular(8),
+            children: _viewModel.hotWallpapers
+                .map(
+                  (item) => Expanded(
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 8),
+                      child: InkWell(
+                        onTap: () {
+                          final index = _viewModel.hotWallpapers.indexOf(item);
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => WallpaperDetailPage(
+                                wallpaperId: '2001919${300 + index}',
+                                title: item.title,
+                                imageUrl: item.imageUrl,
+                                color: item.color,
+                                creatorName: 'Creator ${index + 1}',
+                                isSvip: item.isSvip,
                               ),
-                            );
-                          },
+                            ),
+                          );
+                        },
+                        child: Stack(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.network(
+                                item.imageUrl,
+                                width: double.infinity,
+                                height: 200,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    height: 200,
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        colors: [
+                                          item.color,
+                                          item.color.withOpacity(0.6),
+                                        ],
+                                      ),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                            if (item.isSvip)
+                              Positioned(
+                                top: 8,
+                                right: 8,
+                                child: Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      colors: [
+                                        Color(0xFFFFD700),
+                                        Color(0xFFFFA500),
+                                      ],
+                                    ),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Text(
+                                    'S',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
-                      ),
-                    if (item.isSvip)
-                      Positioned(
-                        top: 8,
-                        right: 8,
-                        child: Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
-                            ),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Text(
-                            'S',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
                       ),
                     ),
-                  ],
-                ),
-              ),
-            ),
-            )).toList(),
+                  ),
+                )
+                .toList(),
           ),
         ],
       ),
@@ -801,7 +790,7 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
               ),
             ),
           ),
-          
+
           // 中间：播放控制
           Row(
             mainAxisSize: MainAxisSize.min,
@@ -811,7 +800,10 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
                 onPressed: () {},
               ),
               IconButton(
-                icon: Icon(Icons.skip_previous, color: Colors.white.withOpacity(0.7)),
+                icon: Icon(
+                  Icons.skip_previous,
+                  color: Colors.white.withOpacity(0.7),
+                ),
                 onPressed: () {},
               ),
               Container(
@@ -826,11 +818,17 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
                 ),
               ),
               IconButton(
-                icon: Icon(Icons.skip_next, color: Colors.white.withOpacity(0.7)),
+                icon: Icon(
+                  Icons.skip_next,
+                  color: Colors.white.withOpacity(0.7),
+                ),
                 onPressed: () {},
               ),
               IconButton(
-                icon: Icon(Icons.volume_up, color: Colors.white.withOpacity(0.7)),
+                icon: Icon(
+                  Icons.volume_up,
+                  color: Colors.white.withOpacity(0.7),
+                ),
                 onPressed: () {},
               ),
               Container(
@@ -849,7 +847,7 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
               ),
             ],
           ),
-          
+
           // 右侧：其他功能
           Row(
             mainAxisSize: MainAxisSize.min,
@@ -875,4 +873,3 @@ class _MyHomePageState extends State<MyHomePage> with SingleTickerProviderStateM
     );
   }
 }
-
