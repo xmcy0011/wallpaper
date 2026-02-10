@@ -6,6 +6,7 @@ import 'login_guide.dart';
 import 'profile_page.dart';
 import 'wallpaper_detail_page.dart';
 import 'resource_zone_page.dart';
+import 'personal_center_page.dart';
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key, required this.title});
@@ -26,7 +27,7 @@ class _MyHomePageState extends State<MyHomePage>
   void initState() {
     super.initState();
     _viewModel = HomeViewModel();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
   }
 
   @override
@@ -79,10 +80,8 @@ class _MyHomePageState extends State<MyHomePage>
                     ),
                     // 资源区
                     const ResourceZonePage(),
-                    // SVIP
-                    _buildPlaceholderTab('SVIP'),
-                    // 组件
-                    _buildPlaceholderTab('组件'),
+                    // 个人中心
+                    const PersonalCenterPage(),
                   ],
                 ),
               ),
@@ -106,7 +105,7 @@ class _MyHomePageState extends State<MyHomePage>
         children: [
           // 导航标签（靠左，固定宽度）
           SizedBox(
-            width: 320,
+            width: 280,
             child: TabBar(
               controller: _tabController,
               labelColor: Colors.blue,
@@ -117,8 +116,7 @@ class _MyHomePageState extends State<MyHomePage>
               tabs: const [
                 Tab(text: '推荐'),
                 Tab(text: '资源区'),
-                Tab(text: 'SVIP'),
-                Tab(text: '组件'),
+                Tab(text: '个人中心'),
               ],
             ),
           ),
@@ -262,16 +260,6 @@ class _MyHomePageState extends State<MyHomePage>
     );
   }
 
-  // 占位 Tab 页（SVIP、组件等）
-  Widget _buildPlaceholderTab(String title) {
-    return Center(
-      child: Text(
-        '$title 功能开发中',
-        style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 16),
-      ),
-    );
-  }
-
   // 主内容区域
   Widget _buildMainContent() {
     return Padding(
@@ -356,15 +344,16 @@ class _MyHomePageState extends State<MyHomePage>
     );
   }
 
-  // 轮播图
+  // 轮播图（按 16:9 宽高比缩放，随窗口变化保持比例）
   Widget _buildCarousel() {
-    return Container(
-      height: 450,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        color: const Color(0xff2a2a2a),
-      ),
-      child: Stack(
+    return AspectRatio(
+      aspectRatio: 16 / 9,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          color: const Color(0xff2a2a2a),
+        ),
+        child: Stack(
         children: [
           // 轮播内容
           PageView.builder(
@@ -515,6 +504,7 @@ class _MyHomePageState extends State<MyHomePage>
           ),
         ],
       ),
+    ),
     );
   }
 
@@ -532,61 +522,86 @@ class _MyHomePageState extends State<MyHomePage>
                   .map(
                     (item) => Container(
                       margin: const EdgeInsets.only(bottom: 16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            item.title,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
+                      child: InkWell(
+                        onTap: () {
+                          final list = _viewModel.currentRecommendations;
+                          final idx = list.indexOf(item);
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => WallpaperDetailPage(
+                                wallpaperId: '2001919${200 + idx}',
+                                title: item.title,
+                                imageUrl: item.imageUrl,
+                                color: item.color,
+                                creatorName: 'Creator ${idx + 1}',
+                                isVip: item.isVip,
+                                isSvip: false,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 8),
-                          InkWell(
-                            onTap: () {
-                              final list = _viewModel.currentRecommendations;
-                              final idx = list.indexOf(item);
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (context) => WallpaperDetailPage(
-                                    wallpaperId: '2001919${200 + idx}',
-                                    title: item.title,
-                                    imageUrl: item.imageUrl,
-                                    color: item.color,
-                                    creatorName: 'Creator ${idx + 1}',
-                                    isVip: item.isVip,
-                                    isSvip: false,
+                          );
+                        },
+                        child: AspectRatio(
+                            aspectRatio: 16 / 9,
+                            child: Stack(
+                              alignment: Alignment.bottomLeft,
+                              children: [
+                                Positioned.fill(
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Image.network(
+                                      item.imageUrl,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (context, error, stackTrace) {
+                                        return Container(
+                                          decoration: BoxDecoration(
+                                            gradient: LinearGradient(
+                                              colors: [
+                                                item.color,
+                                                item.color.withOpacity(0.6),
+                                              ],
+                                            ),
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                        );
+                                      },
+                                    ),
                                   ),
                                 ),
-                              );
-                            },
-                            child: Stack(
-                              children: [
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: Image.network(
-                                    item.imageUrl,
-                                    width: double.infinity,
-                                    height: 200,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) {
-                                      return Container(
-                                        height: 200,
-                                        decoration: BoxDecoration(
-                                          gradient: LinearGradient(
-                                            colors: [
-                                              item.color,
-                                              item.color.withOpacity(0.6),
-                                            ],
-                                          ),
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                        ),
-                                      );
-                                    },
+                            // 底部渐变遮罩，使文字更清晰
+                                Positioned(
+                                  left: 0,
+                                  right: 0,
+                                  bottom: 0,
+                                  child: Container(
+                                    height: 48,
+                                    decoration: BoxDecoration(
+                                      borderRadius: const BorderRadius.vertical(
+                                        bottom: Radius.circular(8),
+                                      ),
+                                      gradient: LinearGradient(
+                                        begin: Alignment.topCenter,
+                                        end: Alignment.bottomCenter,
+                                        colors: [
+                                          Colors.transparent,
+                                          Colors.black.withOpacity(0.7),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                Positioned(
+                                  left: 12,
+                                  right: 12,
+                                  bottom: 12,
+                                  child: Text(
+                                    item.title,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
                                 if (item.isVip)
@@ -612,10 +627,9 @@ class _MyHomePageState extends State<MyHomePage>
                               ],
                             ),
                           ),
-                        ],
+                        ),
                       ),
-                    ),
-                  )
+                    )
                   .toList(),
             ),
           ),
