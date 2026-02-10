@@ -5,6 +5,7 @@ import '../widgets/custom_title_bar.dart';
 import 'login_guide.dart';
 import 'profile_page.dart';
 import 'wallpaper_detail_page.dart';
+import 'resource_zone_page.dart';
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key, required this.title});
@@ -61,20 +62,28 @@ class _MyHomePageState extends State<MyHomePage>
               // 顶部导航栏
               _buildTopBar(),
 
-              // 主内容区域
+              // 主内容区域（TabBarView 切换）
               Expanded(
-                child: SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      // 主内容区（登录横幅 + 轮播图 + 推荐栏）
-                      _buildMainContent(),
-
-                      // 热门壁纸区域
-                      _buildHotWallpapersSection(),
-
-                      const SizedBox(height: 80), // 为底部播放器留空间
-                    ],
-                  ),
+                child: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    // 推荐
+                    SingleChildScrollView(
+                      child: Column(
+                        children: [
+                          _buildMainContent(),
+                          _buildHotWallpapersSection(),
+                          const SizedBox(height: 80),
+                        ],
+                      ),
+                    ),
+                    // 资源区
+                    const ResourceZonePage(),
+                    // SVIP
+                    _buildPlaceholderTab('SVIP'),
+                    // 组件
+                    _buildPlaceholderTab('组件'),
+                  ],
                 ),
               ),
 
@@ -249,6 +258,16 @@ class _MyHomePageState extends State<MyHomePage>
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  // 占位 Tab 页（SVIP、组件等）
+  Widget _buildPlaceholderTab(String title) {
+    return Center(
+      child: Text(
+        '$title 功能开发中',
+        style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 16),
       ),
     );
   }
