@@ -1,4 +1,140 @@
 {
-    "cmake.sourceDirectory": "D:/repo/github/wallpaper/windows",
-    "dart.flutterSdkPath": "D:\\flutter\\flutter"
+    "cmake.sourceDirectory": "E:/repo/github/wallpaper/windows",
+    // 遵循 flutter 输出目录规则，否则会找不到 vcpkg 安装的依赖
+    "cmake.buildDirectory": "${workspaceFolder}/build/windows/x64",
+    // "cmake.generator": "Ninja",
+    "cmake.configureSettings": {
+        "CMAKE_TOOLCHAIN_FILE": "E:/repo/github/vcpkg/scripts/buildsystems/vcpkg.cmake",
+        "VCPKG_MANIFEST_DIR": "E:/repo/github/wallpaper",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+    },
+    "dart.flutterSdkPath": "E:\\flutter",
+    //
+    // [[clangd]]
+    //
+    "clangd.fallbackFlags": [
+        "-I${workspaceFolder}/build/vcpkg_installed/x64-windows/include",
+        "-I${workspaceFolder}/windows/flutter/ephemeral",
+        "-I${workspaceFolder}/windows/flutter/ephemeral/cpp_client_wrapper/include",
+        "-I${workspaceFolder}/**",
+        "-std=c++17",
+        "-DWALLPAPER_ENGINE_STATIC"
+    ],
+    //
+    // [[Files]]
+    // 
+    "files.associations": {
+        "array": "cpp",
+        "hash_map": "cpp",
+        "hash_set": "cpp",
+        "deque": "cpp",
+        "list": "cpp",
+        "string": "cpp",
+        "unordered_map": "cpp",
+        "unordered_set": "cpp",
+        "vector": "cpp",
+        "initializer_list": "cpp",
+        "bitset": "cpp",
+        "*.tcc": "cpp",
+        "algorithm": "cpp",
+        "any": "cpp",
+        "atomic": "cpp",
+        "bit": "cpp",
+        "cctype": "cpp",
+        "charconv": "cpp",
+        "chrono": "cpp",
+        "clocale": "cpp",
+        "cmath": "cpp",
+        "codecvt": "cpp",
+        "compare": "cpp",
+        "concepts": "cpp",
+        "cstddef": "cpp",
+        "cstdint": "cpp",
+        "cstdio": "cpp",
+        "cstdlib": "cpp",
+        "cstring": "cpp",
+        "ctime": "cpp",
+        "cwchar": "cpp",
+        "exception": "cpp",
+        "format": "cpp",
+        "forward_list": "cpp",
+        "functional": "cpp",
+        "iomanip": "cpp",
+        "ios": "cpp",
+        "iosfwd": "cpp",
+        "iostream": "cpp",
+        "istream": "cpp",
+        "iterator": "cpp",
+        "limits": "cpp",
+        "locale": "cpp",
+        "map": "cpp",
+        "memory": "cpp",
+        "new": "cpp",
+        "optional": "cpp",
+        "ostream": "cpp",
+        "ratio": "cpp",
+        "set": "cpp",
+        "sstream": "cpp",
+        "stdexcept": "cpp",
+        "streambuf": "cpp",
+        "system_error": "cpp",
+        "tuple": "cpp",
+        "type_traits": "cpp",
+        "typeinfo": "cpp",
+        "utility": "cpp",
+        "variant": "cpp",
+        "xfacet": "cpp",
+        "xhash": "cpp",
+        "xiosbase": "cpp",
+        "xlocale": "cpp",
+        "xlocbuf": "cpp",
+        "xlocinfo": "cpp",
+        "xlocmes": "cpp",
+        "xlocmon": "cpp",
+        "xlocnum": "cpp",
+        "xloctime": "cpp",
+        "xmemory": "cpp",
+        "xstring": "cpp",
+        "xtr1common": "cpp",
+        "xtree": "cpp",
+        "xutility": "cpp"
+    },
+    //
+    // [[Appearance]]
+    //
+    "editor.fontSize": 14, // 字号
+    // "editor.fontWeight": "450", // 字体粗细
+    "editor.lineHeight": 0, // 行高：使用 0 根据字号自动计算行高
+    "editor.bracketPairColorization.enabled": true, // 控制是否对括号着色
+    "editor.bracketPairColorization.independentColorPoolPerBracketType": false, // 各类括号着色等级不独立
+    "editor.guides.bracketPairs": true, // 启用括号指导线
+    "editor.guides.bracketPairsHorizontal": "active", // 启用水平括号指导线
+    "editor.semanticHighlighting.enabled": true, // 启用语义高亮
+    //
+    // [[ C++ ]]
+    //
+    // 格式化代码风格：LLVM：clang风格、Chromium：谷歌chromium浏览器风格
+    "C_Cpp.clang_format_style": "{ BasedOnStyle: LLVM, IndentWidth: 4, TabWidth: 4, ColumnLimit: 120 }",
+    //
+    // [[ Doxygen documentation generator set ]]
+    //
+    // 下面时设置上面标签tag的具体信息
+    "doxdocgen.file.fileTemplate": "@file {name}",
+    "doxdocgen.file.versionTag": "@version 1.0",
+    "doxdocgen.generic.authorEmail": "xxxx@sina.com",
+    "doxdocgen.generic.authorName": "xxxx",
+    "doxdocgen.generic.authorTag": "@author {author} ({email})",
+    // 日期格式与模板
+    "doxdocgen.generic.dateFormat": "YYYY-MM-DD",
+    "doxdocgen.generic.dateTemplate": "@date {date}",
+    // 根据自动生成的注释模板（目前主要体现在函数注释上）
+    "doxdocgen.generic.order": [
+        "brief",
+        "tparam",
+        "param",
+        "return"
+    ],
+    "doxdocgen.generic.paramTemplate": "@param {param}{indent:20}: ",
+    "doxdocgen.generic.returnTemplate": "@return {type} ",
+    "doxdocgen.generic.splitCasingSmartText": true
 }

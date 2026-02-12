@@ -1,5 +1,3 @@
-flutter/ephemeral/
-
 # Visual Studio user-specific files.
 *.suo
 *.user
@@ -15,3 +13,6 @@ x86/
 *.[Cc]ache
 # but keep track of directories ending in .cache
 !*.[Cc]ache/
+
+# Flutter 中间文件
+flutter/ephemeral/*
