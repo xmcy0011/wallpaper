@@ -267,31 +267,65 @@ class HomeViewModel extends ChangeNotifier {
     return _recommendationsByCategory[categoryIndex].take(6).toList();
   }
 
-  // 热门壁纸
-  final List<HotWallpaperItem> hotWallpapers = [
-    HotWallpaperItem(
-      title: '热门壁纸1',
-      imageUrl: 'https://picsum.photos/300/200?random=20',
-      color: Colors.indigo,
-      isSvip: true,
-    ),
-    HotWallpaperItem(
-      title: '热门壁纸2',
-      imageUrl: 'https://picsum.photos/300/200?random=21',
-      color: Colors.red,
-      isSvip: true,
-    ),
-    HotWallpaperItem(
-      title: '热门壁纸3',
-      imageUrl: 'https://picsum.photos/300/200?random=22',
-      color: Colors.deepPurple,
-      isSvip: true,
-    ),
-  ];
+  // 热门壁纸（分页加载）
+  final List<HotWallpaperItem> _hotWallpapers = [];
+  List<HotWallpaperItem> get hotWallpapers => List.unmodifiable(_hotWallpapers);
+  int _hotWallpapersPage = 0;
+  bool _hotWallpapersLoading = false;
+  bool get hotWallpapersLoading => _hotWallpapersLoading;
+  bool _hotWallpapersHasMore = true;
+  bool get hotWallpapersHasMore => _hotWallpapersHasMore;
+
+  /// 加载热门壁纸（mock API：刷新或首次加载）
+  Future<void> loadHotWallpapers() async {
+    if (_hotWallpapersLoading) return;
+    _hotWallpapersLoading = true;
+    _hotWallpapersPage = 0;
+    notifyListeners();
+    await Future.delayed(const Duration(milliseconds: 500)); // 模拟网络延迟
+    _hotWallpapers.clear();
+    _hotWallpapers.addAll(_mockHotWallpapersPage(0));
+    _hotWallpapersLoading = false;
+    _hotWallpapersHasMore = true;
+    notifyListeners();
+  }
+
+  /// 加载更多热门壁纸（mock API：每次 8 行 = 24 张）
+  Future<void> loadMoreHotWallpapers() async {
+    if (_hotWallpapersLoading || !_hotWallpapersHasMore) return;
+    _hotWallpapersLoading = true;
+    notifyListeners();
+    await Future.delayed(const Duration(milliseconds: 500)); // 模拟网络延迟
+    _hotWallpapersPage++;
+    final newItems = _mockHotWallpapersPage(_hotWallpapersPage);
+    _hotWallpapers.addAll(newItems);
+    _hotWallpapersLoading = false;
+    _hotWallpapersHasMore = newItems.length >= 24; // mock 一直有更多
+    notifyListeners();
+  }
+
+  /// Mock 生成一页热门壁纸（24 张）
+  List<HotWallpaperItem> _mockHotWallpapersPage(int page) {
+    final colors = [
+      Colors.indigo, Colors.red, Colors.deepPurple, Colors.blue,
+      Colors.pink, Colors.orange, Colors.teal, Colors.green,
+      Colors.amber, Colors.cyan, Colors.brown,
+    ];
+    return List.generate(24, (i) {
+      final idx = page * 24 + i;
+      return HotWallpaperItem(
+        title: '热门壁纸${idx + 1}',
+        imageUrl: 'https://picsum.photos/300/200?random=${100 + idx}',
+        color: colors[idx % colors.length],
+        isSvip: idx % 3 == 0,
+      );
+    });
+  }
 
   HomeViewModel() {
     _authService.addListener(_onAuthStateChanged);
     _startCarouselAutoPlay();
+    loadHotWallpapers(); // 首次加载热门壁纸
   }
 
   void selectRecommendation(int index) {
@@ -324,7 +358,9 @@ class HomeViewModel extends ChangeNotifier {
   }
 
   void _startCarouselAutoPlay() {
-    Future.delayed(const Duration(seconds: 3), () {
+    const changeInterval = 5;
+    // 定时器切换轮播图
+    Future.delayed(const Duration(seconds: changeInterval), () {
       if (!_isDisposed && carouselController.hasClients) {
         final len = recommendationCarouselItems.length;
         if (_currentCarouselIndex < len - 1) {
@@ -343,8 +379,17 @@ class HomeViewModel extends ChangeNotifier {
   }
 
   void previousCarouselPage() {
+    final len = recommendationCarouselItems.length;
+    if (len == 0) return;
     if (_currentCarouselIndex > 0) {
       carouselController.previousPage(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    } else {
+      // 首张时点击左箭头，循环到末张
+      carouselController.animateToPage(
+        len - 1,
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
       );
@@ -352,8 +397,17 @@ class HomeViewModel extends ChangeNotifier {
   }
 
   void nextCarouselPage() {
-    if (_currentCarouselIndex < recommendationCarouselItems.length - 1) {
+    final len = recommendationCarouselItems.length;
+    if (len == 0) return;
+    if (_currentCarouselIndex < len - 1) {
       carouselController.nextPage(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    } else {
+      // 末张时点击右箭头，循环到首张
+      carouselController.animateToPage(
+        0,
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
       );

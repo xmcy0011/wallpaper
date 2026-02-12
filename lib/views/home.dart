@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../models/wallpaper_model.dart';
 import '../viewmodels/home_viewmodel.dart';
 import '../services/auth_service.dart';
 import '../widgets/custom_title_bar.dart';
@@ -25,16 +26,35 @@ class _MyHomePageState extends State<MyHomePage>
 
   // 主内容区右侧 Tab 索引，0=推荐
   int _mainContentTabIndex = 0;
+  final ScrollController _recommendationScrollController = ScrollController();
+  bool _showBackToTopButton = false;
+  bool _backToTopButtonHovered = false;
+  static const double _backToTopThreshold = 300;
 
   @override
   void initState() {
     super.initState();
     _viewModel = HomeViewModel();
     _tabController = TabController(length: 3, vsync: this);
+    _recommendationScrollController.addListener(_onRecommendationScroll);
+  }
+
+  void _onRecommendationScroll() {
+    if (!_recommendationScrollController.hasClients) return;
+    final pos = _recommendationScrollController.position;
+    if (pos.pixels >= pos.maxScrollExtent - 200) {
+      _viewModel.loadMoreHotWallpapers();
+    }
+    final shouldShow = pos.pixels > _backToTopThreshold;
+    if (shouldShow != _showBackToTopButton) {
+      setState(() => _showBackToTopButton = shouldShow);
+    }
   }
 
   @override
   void dispose() {
+    _recommendationScrollController.removeListener(_onRecommendationScroll);
+    _recommendationScrollController.dispose();
     _tabController.dispose();
     _viewModel.dispose();
     super.dispose();
@@ -50,6 +70,56 @@ class _MyHomePageState extends State<MyHomePage>
     Navigator.of(
       context,
     ).push(MaterialPageRoute(builder: (context) => const ProfilePage()));
+  }
+
+  void _scrollToTop() {
+    _recommendationScrollController.animateTo(
+      0,
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeOut,
+    );
+  }
+
+  Widget _buildBackToTopButton() {
+    return Positioned(
+      right: 24,
+      bottom: 24,
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _backToTopButtonHovered = true),
+        onExit: (_) => setState(() => _backToTopButtonHovered = false),
+        child: AnimatedOpacity(
+          opacity: _backToTopButtonHovered ? 1.0 : 0.5,
+          duration: const Duration(milliseconds: 150),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: _scrollToTop,
+              borderRadius: BorderRadius.circular(24),
+              child: Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: const Color(0xff2a2a2a),
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.keyboard_arrow_up_rounded,
+                  color: Colors.white,
+                  size: 28,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -72,14 +142,25 @@ class _MyHomePageState extends State<MyHomePage>
                   controller: _tabController,
                   children: [
                     // 推荐
-                    SingleChildScrollView(
-                      child: Column(
-                        children: [
-                          _buildMainContent(),
-                          _buildHotWallpapersSection(),
-                          const SizedBox(height: 80),
-                        ],
-                      ),
+                    Stack(
+                      children: [
+                        RefreshIndicator(
+                          onRefresh: () => _viewModel.loadHotWallpapers(),
+                          color: Colors.blue,
+                          child: SingleChildScrollView(
+                            controller: _recommendationScrollController,
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            child: Column(
+                              children: [
+                                _buildMainContent(),
+                                _buildHotWallpapersSection(),
+                                const SizedBox(height: 80),
+                              ],
+                            ),
+                          ),
+                        ),
+                        if (_showBackToTopButton) _buildBackToTopButton(),
+                      ],
                     ),
                     // 资源区
                     const ResourceZonePage(),
@@ -844,7 +925,7 @@ class _MyHomePageState extends State<MyHomePage>
     );
   }
 
-  // 热门壁纸区域
+  // 热门壁纸区域（GridView 3 列，默认 8 行 24 张，下拉刷新 + 滚动加载更多）
   Widget _buildHotWallpapersSection() {
     return Padding(
       padding: const EdgeInsets.all(16.0),
@@ -864,9 +945,9 @@ class _MyHomePageState extends State<MyHomePage>
               ),
               TextButton(
                 onPressed: () {
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(const SnackBar(content: Text('查看更多功能开发中')));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('查看更多功能开发中')),
+                  );
                 },
                 child: Text(
                   '更多',
@@ -879,86 +960,159 @@ class _MyHomePageState extends State<MyHomePage>
             ],
           ),
           const SizedBox(height: 16),
-          Row(
-            children: _viewModel.hotWallpapers
-                .map(
-                  (item) => Expanded(
-                    child: Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 8),
-                      child: InkWell(
-                        onTap: () {
-                          final index = _viewModel.hotWallpapers.indexOf(item);
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) => WallpaperDetailPage(
-                                wallpaperId: '2001919${300 + index}',
-                                title: item.title,
-                                imageUrl: item.imageUrl,
-                                color: item.color,
-                                creatorName: 'Creator ${index + 1}',
-                                isSvip: item.isSvip,
-                              ),
-                            ),
-                          );
-                        },
-                        child: Stack(
-                          children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: Image.network(
-                                item.imageUrl,
-                                width: double.infinity,
-                                height: 200,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return Container(
-                                    height: 200,
-                                    decoration: BoxDecoration(
-                                      gradient: LinearGradient(
-                                        colors: [
-                                          item.color,
-                                          item.color.withOpacity(0.6),
-                                        ],
-                                      ),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                            if (item.isSvip)
-                              Positioned(
-                                top: 8,
-                                right: 8,
-                                child: Container(
-                                  padding: const EdgeInsets.all(6),
-                                  decoration: BoxDecoration(
-                                    gradient: const LinearGradient(
-                                      colors: [
-                                        Color(0xFFFFD700),
-                                        Color(0xFFFFA500),
-                                      ],
-                                    ),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: const Text(
-                                    'S',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                          ],
+          AnimatedBuilder(
+            animation: _viewModel,
+            builder: (context, _) {
+              if (_viewModel.hotWallpapersLoading &&
+                  _viewModel.hotWallpapers.isEmpty) {
+                return const SizedBox(
+                  height: 200,
+                  child: Center(
+                    child: CircularProgressIndicator(color: Colors.blue),
+                  ),
+                );
+              }
+              return Column(
+                children: [
+                  GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                      childAspectRatio: 16 / 9,
+                    ),
+                    itemCount: _viewModel.hotWallpapers.length,
+                    itemBuilder: (context, index) {
+                      final item = _viewModel.hotWallpapers[index];
+                      return _buildHotWallpaperCard(item, index);
+                    },
+                  ),
+                  if (_viewModel.hotWallpapersLoading &&
+                      _viewModel.hotWallpapers.isNotEmpty)
+                    const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Center(
+                        child: SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.blue,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                )
-                .toList(),
+                ],
+              );
+            },
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHotWallpaperCard(HotWallpaperItem item, int index) {
+    return InkWell(
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => WallpaperDetailPage(
+              wallpaperId: '2001919${300 + index}',
+              title: item.title,
+              imageUrl: item.imageUrl,
+              color: item.color,
+              creatorName: 'Creator ${index + 1}',
+              isSvip: item.isSvip,
+            ),
+          ),
+        );
+      },
+      borderRadius: BorderRadius.circular(8),
+      child: Stack(
+        alignment: Alignment.bottomLeft,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.network(
+              item.imageUrl,
+              fit: BoxFit.cover,
+              width: double.infinity,
+              height: double.infinity,
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        item.color,
+                        item.color.withOpacity(0.6),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                );
+              },
+            ),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: Container(
+              height: 40,
+              decoration: BoxDecoration(
+                borderRadius: const BorderRadius.vertical(
+                  bottom: Radius.circular(8),
+                ),
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    Colors.black.withOpacity(0.7),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 8,
+            right: 8,
+            bottom: 8,
+            child: Text(
+              item.title,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          if (item.isSvip)
+            Positioned(
+              top: 8,
+              right: 8,
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
+                  ),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: const Text(
+                  'S',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
