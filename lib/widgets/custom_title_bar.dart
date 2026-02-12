@@ -77,12 +77,12 @@ class _CustomTitleBarState extends State<CustomTitleBar> {
 
   void _minimize() => windowManager.minimize();
   void _maximizeOrRestore() async {
-    if (_isMaximized) {
-      await windowManager.unmaximize();
-    } else {
-      await windowManager.maximize();
-    }
-    _checkMaximized();
+    // if (_isMaximized) {
+    //   await windowManager.unmaximize();
+    // } else {
+    //   await windowManager.maximize();
+    // }
+    // _checkMaximized();
   }
 
   void _close() => windowManager.close();
@@ -165,22 +165,16 @@ class _CustomTitleBarState extends State<CustomTitleBar> {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // 刷新
-              _TitleBarIconButton(
-                icon: Icons.refresh,
-                tooltip: '刷新',
-                onPressed: () {},
-              ),
               // 最小化
               _WindowControlButton(
                 icon: Icons.remove,
                 onPressed: _minimize,
               ),
               // 最大化/恢复（恢复时显示重叠方框图标）
-              _WindowControlButton(
-                icon: _isMaximized ? Icons.filter_none : Icons.crop_square,
-                onPressed: _maximizeOrRestore,
-              ),
+              // _WindowControlButton(
+              //   icon: _isMaximized ? Icons.filter_none : Icons.crop_square,
+              //   onPressed: _maximizeOrRestore,
+              // ),
               // 关闭
               _WindowControlButton(
                 icon: Icons.close,

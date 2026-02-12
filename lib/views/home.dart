@@ -23,6 +23,9 @@ class _MyHomePageState extends State<MyHomePage>
   late TabController _tabController;
   final _authService = AuthService();
 
+  // 主内容区右侧 Tab 索引，0=推荐
+  int _mainContentTabIndex = 0;
+
   @override
   void initState() {
     super.initState();
@@ -260,28 +263,247 @@ class _MyHomePageState extends State<MyHomePage>
     );
   }
 
-  // 主内容区域
+  // 主内容区域：右侧 Tab 标签，左侧根据选中 Tab 动态变化
   Widget _buildMainContent() {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          // 主体：轮播图 + 推荐栏（登录横幅不再占位）
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(flex: 5, child: _buildCarousel()),
-              const SizedBox(width: 16),
-              Expanded(flex: 3, child: _buildRecommendationSidebar()),
-            ],
+    return SizedBox(
+      height: 416,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 左侧：根据 List 选择页动态显示内容
+                Expanded(
+                  child: _mainContentTabIndex == 0
+                      ? _buildRecommendationContent()
+                      : _buildGridContent(),
+                ),
+                const SizedBox(width: 16),
+                // 右侧：List 标签
+                _buildMainContentListViews(),
+              ],
+            ),
+            if (!_viewModel.isLoggedIn && _viewModel.showLoginBanner)
+              Positioned(
+                left: 0,
+                top: 0,
+                child: SizedBox(width: 200, child: _buildLoginBanner()),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 右侧 ListView 标签栏（ListView + 鼠标悬停切换）
+  Widget _buildMainContentListViews() {
+    final tabNames = _viewModel.mainContentTabNames;
+    return Center(
+      child: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xff2D2F31),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: SizedBox(
+          width: 200,
+          height: 388,
+          child: ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: tabNames.length,
+            itemBuilder: (context, index) {
+              final isSelected = index == _mainContentTabIndex;
+              return MouseRegion(
+                onEnter: (_) => setState(() => _mainContentTabIndex = index),
+                child: SizedBox(
+                  height: 58,
+                  child: InkWell(
+                    onTap: () => setState(() => _mainContentTabIndex = index),
+                    borderRadius: BorderRadius.circular(4),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        gradient: isSelected
+                            ? LinearGradient(
+                                begin: Alignment.centerLeft,
+                                end: Alignment.centerRight,
+                                colors: [
+                                  Colors.white.withOpacity(0.02),
+                                  Colors.white.withOpacity(0.12),
+                                ],
+                              )
+                            : null,
+                        color: isSelected ? null : Colors.transparent,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      alignment: Alignment.centerRight,
+                      child: Text(
+                        tabNames[index],
+                        style: TextStyle(
+                          color: isSelected
+                              ? Colors.white
+                              : Colors.white.withOpacity(0.75),
+                          fontSize: isSelected ? 18 : 14,
+                          fontWeight: isSelected
+                              ? FontWeight.w600
+                              : FontWeight.normal,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
           ),
-          // 左侧：登录横幅（悬浮，不挤占轮播图空间）
-          if (!_viewModel.isLoggedIn && _viewModel.showLoginBanner)
+        ),
+      ),
+    );
+  }
+
+  // 推荐 Tab 内容：轮播图(6张) + 右侧竖排 2 张图片
+  Widget _buildRecommendationContent() {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(child: _buildCarousel()),
+        const SizedBox(width: 16),
+        SizedBox(width: 325, child: _buildRecommendationSidebar()),
+      ],
+    );
+  }
+
+  // 其他 Tab 内容：六宫格 6 张 16:9 图片
+  Widget _buildGridContent() {
+    final items = _viewModel.getRecommendationGridItems(_mainContentTabIndex);
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        childAspectRatio: 16 / 9,
+      ),
+      itemCount: items.length,
+      itemBuilder: (context, index) {
+        final item = items[index];
+        return _buildGridCard(
+          title: item.title,
+          imageUrl: item.imageUrl,
+          color: item.color,
+          index: index,
+          isVip: item.isVip,
+        );
+      },
+    );
+  }
+
+  Widget _buildGridCard({
+    required String title,
+    required String imageUrl,
+    required Color color,
+    required int index,
+    bool isVip = false,
+  }) {
+    return InkWell(
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => WallpaperDetailPage(
+              wallpaperId: 'grid_$index',
+              title: title,
+              imageUrl: imageUrl,
+              color: color,
+              creatorName: 'Creator ${index + 1}',
+              isVip: isVip,
+            ),
+          ),
+        );
+      },
+      borderRadius: BorderRadius.circular(8),
+      child: Stack(
+        alignment: Alignment.bottomLeft,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.network(
+              imageUrl,
+              fit: BoxFit.cover,
+              width: double.infinity,
+              height: double.infinity,
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [color, color.withOpacity(0.6)],
+                    ),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                );
+              },
+            ),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: Container(
+              height: 40,
+              decoration: BoxDecoration(
+                borderRadius: const BorderRadius.vertical(
+                  bottom: Radius.circular(8),
+                ),
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    Colors.black.withOpacity(0.7),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 12,
+            right: 12,
+            bottom: 12,
+            child: Text(
+              title,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          if (isVip)
             Positioned(
-              left: 0,
-              top: 0,
-              child: SizedBox(width: 200, child: _buildLoginBanner()),
+              top: 8,
+              right: 8,
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: Colors.amber,
+                  shape: BoxShape.circle,
+                ),
+                child: const Text(
+                  'V',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
             ),
         ],
       ),
@@ -361,9 +583,9 @@ class _MyHomePageState extends State<MyHomePage>
             onPageChanged: (index) {
               _viewModel.updateCarouselIndex(index);
             },
-            itemCount: _viewModel.carouselItems.length,
+            itemCount: _viewModel.recommendationCarouselItems.length,
             itemBuilder: (context, index) {
-              final item = _viewModel.carouselItems[index];
+              final item = _viewModel.recommendationCarouselItems[index];
               return InkWell(
                 onTap: () {
                   Navigator.of(context).push(
@@ -487,7 +709,7 @@ class _MyHomePageState extends State<MyHomePage>
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(
-                _viewModel.carouselItems.length,
+                _viewModel.recommendationCarouselItems.length,
                 (index) => Container(
                   width: 8,
                   height: 8,
@@ -508,180 +730,117 @@ class _MyHomePageState extends State<MyHomePage>
     );
   }
 
-  // 推荐侧边栏（左侧分类列表 + 右侧推荐内容，联动）
+  // 推荐 Tab 右侧竖排 2 张固定图片
   Widget _buildRecommendationSidebar() {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // 右侧：当前分类的推荐内容
-        Expanded(
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: _viewModel.currentRecommendations
-                  .map(
-                    (item) => Container(
-                      margin: const EdgeInsets.only(bottom: 16),
-                      child: InkWell(
-                        onTap: () {
-                          final list = _viewModel.currentRecommendations;
-                          final idx = list.indexOf(item);
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) => WallpaperDetailPage(
-                                wallpaperId: '2001919${200 + idx}',
-                                title: item.title,
-                                imageUrl: item.imageUrl,
-                                color: item.color,
-                                creatorName: 'Creator ${idx + 1}',
-                                isVip: item.isVip,
-                                isSvip: false,
-                              ),
-                            ),
-                          );
-                        },
-                        child: AspectRatio(
-                            aspectRatio: 16 / 9,
-                            child: Stack(
-                              alignment: Alignment.bottomLeft,
-                              children: [
-                                Positioned.fill(
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(8),
-                                    child: Image.network(
-                                      item.imageUrl,
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (context, error, stackTrace) {
-                                        return Container(
-                                          decoration: BoxDecoration(
-                                            gradient: LinearGradient(
-                                              colors: [
-                                                item.color,
-                                                item.color.withOpacity(0.6),
-                                              ],
-                                            ),
-                                            borderRadius: BorderRadius.circular(8),
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                ),
-                            // 底部渐变遮罩，使文字更清晰
-                                Positioned(
-                                  left: 0,
-                                  right: 0,
-                                  bottom: 0,
-                                  child: Container(
-                                    height: 48,
-                                    decoration: BoxDecoration(
-                                      borderRadius: const BorderRadius.vertical(
-                                        bottom: Radius.circular(8),
-                                      ),
-                                      gradient: LinearGradient(
-                                        begin: Alignment.topCenter,
-                                        end: Alignment.bottomCenter,
-                                        colors: [
-                                          Colors.transparent,
-                                          Colors.black.withOpacity(0.7),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                Positioned(
-                                  left: 12,
-                                  right: 12,
-                                  bottom: 12,
-                                  child: Text(
-                                    item.title,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                if (item.isVip)
-                                  Positioned(
-                                    top: 8,
-                                    right: 8,
-                                    child: Container(
-                                      padding: const EdgeInsets.all(4),
-                                      decoration: BoxDecoration(
-                                        color: Colors.amber,
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: const Text(
-                                        'V',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    )
-                  .toList(),
-            ),
-          ),
-        ),
-      const SizedBox(width: 12),
-      // 左侧：推荐分类列表
-      Container(
-        width: 140,
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: const Color(0xff2a2a2a),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              '推荐',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
+    final items = _viewModel.recommendationSidebarItems;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: items.map((item) {
+        final idx = items.indexOf(item);
+        return Container(
+          margin: idx == items.length - 1 ? null : const EdgeInsets.only(bottom: 16),
+          child: InkWell(
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => WallpaperDetailPage(
+                  wallpaperId: '2001919${200 + idx}',
+                  title: item.title,
+                  imageUrl: item.imageUrl,
+                  color: item.color,
+                  creatorName: 'Creator ${idx + 1}',
+                  isVip: item.isVip,
+                  isSvip: false,
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            ...List.generate(_viewModel.recommendationList.length, (index) {
-              final text = _viewModel.recommendationList[index];
-              final isSelected =
-                  index == _viewModel.selectedRecommendationIndex;
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: InkWell(
-                  onTap: () => _viewModel.selectRecommendation(index),
-                  child: Text(
-                    text,
-                    style: TextStyle(
-                      color: isSelected
-                          ? Colors.blue
-                          : Colors.white.withOpacity(0.8),
-                      fontSize: 13,
-                      fontWeight: isSelected
-                          ? FontWeight.w600
-                          : FontWeight.normal,
+            );
+          },
+          child: AspectRatio(
+            aspectRatio: 16 / 9,
+            child: Stack(
+              alignment: Alignment.bottomLeft,
+              children: [
+                Positioned.fill(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.network(
+                      item.imageUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [item.color, item.color.withOpacity(0.6)],
+                            ),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        );
+                      },
                     ),
                   ),
                 ),
-              );
-            }),
-          ],
-        ),
-      ),
-      ],
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: Container(
+                    height: 48,
+                    decoration: BoxDecoration(
+                      borderRadius: const BorderRadius.vertical(
+                        bottom: Radius.circular(8),
+                      ),
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.transparent,
+                          Colors.black.withOpacity(0.7),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  left: 12,
+                  right: 12,
+                  bottom: 12,
+                  child: Text(
+                    item.title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                if (item.isVip)
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: Colors.amber,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Text(
+                        'V',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+              ),
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 
