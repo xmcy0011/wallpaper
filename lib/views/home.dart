@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import '../models/wallpaper_model.dart';
 import '../viewmodels/home_viewmodel.dart';
-import '../services/auth_service.dart';
 import '../widgets/custom_title_bar.dart';
+import '../viewmodels/login_viewmodel.dart';
 import 'login_guide.dart';
 import 'profile_page.dart';
 import 'wallpaper_detail_page.dart';
 import 'resource_zone_page.dart';
 import 'personal_center_page.dart';
+import '../services/drivenadapter.dart';
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key, required this.title});
@@ -22,7 +23,7 @@ class _MyHomePageState extends State<MyHomePage>
     with SingleTickerProviderStateMixin {
   late HomeViewModel _viewModel;
   late TabController _tabController;
-  final _authService = AuthService();
+  late LoginViewModel _loginViewModel;
 
   // 主内容区右侧 Tab 索引，0=推荐
   int _mainContentTabIndex = 0;
@@ -35,6 +36,7 @@ class _MyHomePageState extends State<MyHomePage>
   void initState() {
     super.initState();
     _viewModel = HomeViewModel();
+    _loginViewModel = LoginViewModel();
     _tabController = TabController(length: 3, vsync: this);
     _recommendationScrollController.addListener(_onRecommendationScroll);
   }
@@ -273,9 +275,9 @@ class _MyHomePageState extends State<MyHomePage>
 
               // 用户信息或登录按钮
               AnimatedBuilder(
-                animation: _authService,
+                animation: _loginViewModel.loginStateNotifier,
                 builder: (context, _) {
-                  if (_authService.isLoggedIn) {
+                  if (_loginViewModel.loginState == AuthState.loggedIn) {
                     return InkWell(
                       onTap: _openProfile,
                       child: Container(
@@ -293,10 +295,10 @@ class _MyHomePageState extends State<MyHomePage>
                                 color: Colors.white.withOpacity(0.2),
                                 shape: BoxShape.circle,
                               ),
-                              child: _authService.userAvatar != null
+                              child: _loginViewModel.userAvatar != null
                                   ? ClipOval(
                                       child: Image.network(
-                                        _authService.userAvatar!,
+                                        _loginViewModel.userAvatar!,
                                         fit: BoxFit.cover,
                                         errorBuilder:
                                             (context, error, stackTrace) {
@@ -316,7 +318,7 @@ class _MyHomePageState extends State<MyHomePage>
                             ),
                             const SizedBox(width: 6),
                             Text(
-                              _authService.userName ?? '用户',
+                              _loginViewModel.userName,
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 12,

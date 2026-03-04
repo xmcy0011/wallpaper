@@ -37,43 +37,43 @@ class CustomTitleBar extends StatefulWidget {
   State<CustomTitleBar> createState() => _CustomTitleBarState();
 }
 
-class _WindowListenerImpl extends WindowListener {
-  final _CustomTitleBarState _state;
+// class _WindowListenerImpl extends WindowListener {
+//   final _CustomTitleBarState _state;
 
-  _WindowListenerImpl(this._state);
+//   _WindowListenerImpl(this._state);
 
-  @override
-  void onWindowMaximize() => _state._checkMaximized();
-  @override
-  void onWindowUnmaximize() => _state._checkMaximized();
-}
+//   @override
+//   void onWindowMaximize() => _state._checkMaximized();
+//   @override
+//   void onWindowUnmaximize() => _state._checkMaximized();
+// }
 
 class _CustomTitleBarState extends State<CustomTitleBar> {
-  bool _isMaximized = false;
-  late final WindowListener _windowListener;
+  // bool _isMaximized = false;
+  //late final WindowListener _windowListener;
 
   @override
   void initState() {
     super.initState();
-    _checkMaximized();
-    _windowListener = _WindowListenerImpl(this);
-    windowManager.addListener(_windowListener);
+    //_checkMaximized();
+    //_windowListener = _WindowListenerImpl(this);
+    //windowManager.addListener(_windowListener);
   }
 
   @override
   void dispose() {
-    windowManager.removeListener(_windowListener);
+    // windowManager.removeListener(_windowListener);
     super.dispose();
   }
 
-  Future<void> _checkMaximized() async {
-    if (isDesktopPlatform) {
-      final isMaximized = await windowManager.isMaximized();
-      if (mounted) {
-        setState(() => _isMaximized = isMaximized);
-      }
-    }
-  }
+  // Future<void> _checkMaximized() async {
+  //   if (isDesktopPlatform) {
+  //     final isMaximized = await windowManager.isMaximized();
+  //     if (mounted) {
+  //       setState(() => _isMaximized = isMaximized);
+  //     }
+  //   }
+  // }
 
   void _minimize() => windowManager.minimize();
   void _maximizeOrRestore() async {
@@ -101,11 +101,7 @@ class _CustomTitleBarState extends State<CustomTitleBar> {
         children: [
           // 返回按钮（可选）
           if (widget.onBackPressed != null)
-            _TitleBarIconButton(
-              icon: Icons.arrow_back,
-              tooltip: '返回首页',
-              onPressed: widget.onBackPressed!,
-            ),
+            _TitleBarIconButton(icon: Icons.arrow_back, tooltip: '返回首页', onPressed: widget.onBackPressed!),
           // 左侧：Logo + 标题（可拖拽区域）
           Expanded(
             child: DragToMoveArea(
@@ -113,74 +109,48 @@ class _CustomTitleBarState extends State<CustomTitleBar> {
                 onDoubleTap: _maximizeOrRestore,
                 behavior: HitTestBehavior.opaque,
                 child: Row(
-                children: [
-                  const SizedBox(width: 16),
-                  // Logo
-                  Container(
-                    width: 24,
-                    height: 24,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF2196F3),
-                      borderRadius: BorderRadius.circular(4),
+                  children: [
+                    const SizedBox(width: 16),
+                    // Logo
+                    Container(
+                      width: 24,
+                      height: 24,
+                      decoration: BoxDecoration(color: const Color(0xFF2196F3), borderRadius: BorderRadius.circular(4)),
+                      child: const Icon(Icons.wallpaper_rounded, color: Colors.white, size: 16),
                     ),
-                    child: const Icon(
-                      Icons.wallpaper_rounded,
-                      color: Colors.white,
-                      size: 16,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  // 主标题
-                  Text(
-                    widget.title,
-                    style: const TextStyle(
-                      color: Color(0xFF333333),
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  if (widget.subtitle != null) ...[
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 10),
+                    // 主标题
                     Text(
-                      widget.subtitle!,
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                        fontSize: 13,
-                        fontWeight: FontWeight.normal,
-                      ),
+                      widget.title,
+                      style: const TextStyle(color: Color(0xFF333333), fontSize: 16, fontWeight: FontWeight.bold),
                     ),
+                    if (widget.subtitle != null) ...[
+                      const SizedBox(width: 8),
+                      Text(
+                        widget.subtitle!,
+                        style: TextStyle(color: Colors.grey[600], fontSize: 13, fontWeight: FontWeight.normal),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
           ),
-        ),
           // 中间：自定义内容
-          if (widget.child != null) ...[
-            Expanded(
-              child: widget.child!,
-            ),
-          ],
+          if (widget.child != null) ...[Expanded(child: widget.child!)],
           // 右侧：功能图标 + 分隔线 + 窗口控制按钮
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               // 最小化
-              _WindowControlButton(
-                icon: Icons.remove,
-                onPressed: _minimize,
-              ),
+              _WindowControlButton(icon: Icons.remove, onPressed: _minimize),
               // 最大化/恢复（恢复时显示重叠方框图标）
               // _WindowControlButton(
               //   icon: _isMaximized ? Icons.filter_none : Icons.crop_square,
               //   onPressed: _maximizeOrRestore,
               // ),
               // 关闭
-              _WindowControlButton(
-                icon: Icons.close,
-                onPressed: _close,
-                isClose: true,
-              ),
+              _WindowControlButton(icon: Icons.close, onPressed: _close, isClose: true),
             ],
           ),
         ],
@@ -195,11 +165,7 @@ class _TitleBarIconButton extends StatefulWidget {
   final String tooltip;
   final VoidCallback onPressed;
 
-  const _TitleBarIconButton({
-    required this.icon,
-    required this.tooltip,
-    required this.onPressed,
-  });
+  const _TitleBarIconButton({required this.icon, required this.tooltip, required this.onPressed});
 
   @override
   State<_TitleBarIconButton> createState() => _TitleBarIconButtonState();
@@ -223,11 +189,7 @@ class _TitleBarIconButtonState extends State<_TitleBarIconButton> {
             width: 40,
             height: 40,
             color: _hovered ? Colors.grey[200] : Colors.transparent,
-            child: Icon(
-              widget.icon,
-              size: 20,
-              color: const Color(0xFF333333),
-            ),
+            child: Icon(widget.icon, size: 20, color: const Color(0xFF333333)),
           ),
         ),
       ),
@@ -241,11 +203,7 @@ class _WindowControlButton extends StatefulWidget {
   final VoidCallback onPressed;
   final bool isClose;
 
-  const _WindowControlButton({
-    required this.icon,
-    required this.onPressed,
-    this.isClose = false,
-  });
+  const _WindowControlButton({required this.icon, required this.onPressed, this.isClose = false});
 
   @override
   State<_WindowControlButton> createState() => _WindowControlButtonState();
@@ -271,11 +229,7 @@ class _WindowControlButtonState extends State<_WindowControlButton> {
           width: 46,
           height: 40,
           color: _hovered ? hoverColor : Colors.transparent,
-          child: Icon(
-            widget.icon,
-            size: 14,
-            color: const Color(0xFF333333),
-          ),
+          child: Icon(widget.icon, size: 14, color: const Color(0xFF333333)),
         ),
       ),
     );

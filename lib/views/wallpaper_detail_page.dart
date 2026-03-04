@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import '../viewmodels/wallpaper_detail_viewmodel.dart';
 import '../models/wallpaper_model.dart';
-import '../services/auth_service.dart';
-import '../utils/platform_utils.dart';
 import '../widgets/custom_title_bar.dart';
 
 /// 壁纸详情页面
@@ -605,27 +603,111 @@ class _WallpaperDetailPageState extends State<WallpaperDetailPage> {
           ),
         ),
         const SizedBox(height: 12),
-        SizedBox(
+        _buildApplyWallpaperButton(context),
+      ],
+    );
+  }
+
+  // 应用壁纸按钮（带下载进度）
+  Widget _buildApplyWallpaperButton(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _viewModel,
+      builder: (context, _) {
+        final progress = _viewModel.applyProgress;
+        final isApplied = _viewModel.isApplied;
+        final isApplying = _viewModel.isApplying;
+
+        String buttonText;
+        if (isApplied) {
+          buttonText = '已应用';
+        } else if (isApplying) {
+          buttonText = '${(progress * 100).round()}%';
+        } else {
+          buttonText = '应用壁纸';
+        }
+
+        return SizedBox(
           width: double.infinity,
-          child: ElevatedButton.icon(
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('应用壁纸功能开发中')),
-              );
-            },
-            icon: const Icon(Icons.send, size: 18),
-            label: const Text('应用壁纸'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              shape: RoundedRectangleBorder(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return ClipRRect(
                 borderRadius: BorderRadius.circular(8),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      // 进度条背景
+                      if (isApplying && progress > 0) ...[
+                        Positioned.fill(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(8),
+                              color: Colors.blue.withOpacity(0.3),
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          left: 0,
+                          top: 0,
+                          bottom: 0,
+                          width: constraints.maxWidth * progress,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(8),
+                              color: Colors.blue,
+                            ),
+                          ),
+                        ),
+                      ],
+                      Positioned.fill(
+                        child: ElevatedButton.icon(
+                    onPressed: (isApplying || isApplied)
+                        ? null
+                        : () async {
+                            try {
+                              await _viewModel.applyWallpaper();
+                            } catch (e) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('应用失败: $e'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                    icon: Icon(
+                      isApplied ? Icons.check : Icons.send,
+                      size: 18,
+                    ),
+                    label: Text(buttonText),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isApplied
+                          ? Colors.green
+                          : (isApplying ? Colors.transparent : Colors.blue),
+                      foregroundColor: Colors.white,
+                      disabledForegroundColor: Colors.white,
+                      disabledBackgroundColor: isApplied
+                          ? Colors.green
+                          : (isApplying ? Colors.transparent : Colors.blue),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                        ),
+                      ),
+                    ],
               ),
             ),
+          );
+            },
           ),
-        ),
-      ],
+        );
+      },
     );
   }
 

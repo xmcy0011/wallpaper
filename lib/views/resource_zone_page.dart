@@ -12,7 +12,6 @@ class ResourceZonePage extends StatefulWidget {
 
 class _ResourceZonePageState extends State<ResourceZonePage> {
   int _selectedPrimaryFilter = 0; // 全部
-  int _selectedSecondaryFilter = 0; // 美女
   int _selectedSortIndex = 0;
   int _currentPage = 1;
 

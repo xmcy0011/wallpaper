@@ -4,21 +4,21 @@
             "name": "Win32",
             "includePath": [
                 "${workspaceFolder}/**",
-                "${workspaceFolder}/build/vcpkg_installed/x64-windows/include/**",
+                "${workspaceFolder}/build/windows/x64/vcpkg_installed/x64-windows/include/**",
                 "${workspaceFolder}/windows/flutter/ephemeral",
                 "${workspaceFolder}/windows/flutter/ephemeral/cpp_client_wrapper/include/**"
             ],
             "defines": [
                 "_DEBUG",
                 "UNICODE",
-                "_UNICODE"
+                "_UNICODE",
+                "WALLPAPER_ENGINE_STATIC"
             ],
             "windowsSdkVersion": "10.0.26100.0",
             "compilerPath": "cl.exe",
             "cStandard": "c17",
             "cppStandard": "c++17",
-            "intelliSenseMode": "windows-msvc-x64",
-            "compileCommands": "${workspaceFolder}/build/compile_commands.json"
+            "intelliSenseMode": "windows-msvc-x64"
 
         }
     ],

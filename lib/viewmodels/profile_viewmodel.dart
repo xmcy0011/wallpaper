@@ -1,21 +1,22 @@
 import 'package:flutter/foundation.dart';
-import '../services/auth_service.dart';
+import '../services/drivenadapter.dart';
+import '../services/services.dart';
 
 /// 个人中心 ViewModel
 class ProfileViewModel extends ChangeNotifier {
-  final AuthService _authService = AuthService();
+  final DrivenAuthService _authService = Services().getAuthService();
 
-  bool get isLoggedIn => _authService.isLoggedIn;
+  bool get isLoggedIn => _authService.loginState == AuthState.loggedIn;
   String? get userName => _authService.userName;
   String? get userAvatar => _authService.userAvatar;
 
   ProfileViewModel() {
-    _authService.addListener(_onAuthStateChanged);
+    _authService.loginStateNotifier.addListener(_onAuthStateChanged);
   }
 
   @override
   void dispose() {
-    _authService.removeListener(_onAuthStateChanged);
+    _authService.loginStateNotifier.removeListener(_onAuthStateChanged);
     super.dispose();
   }
 

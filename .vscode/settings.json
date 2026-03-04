@@ -17,6 +17,8 @@
         "-I${workspaceFolder}/windows/flutter/ephemeral",
         "-I${workspaceFolder}/windows/flutter/ephemeral/cpp_client_wrapper/include",
         "-I${workspaceFolder}/**",
+        "-I${workspaceFolder}/windows/wallpaperEngine/engine",
+        "-I${workspaceFolder}/windows",
         "-std=c++17",
         "-DWALLPAPER_ENGINE_STATIC"
     ],

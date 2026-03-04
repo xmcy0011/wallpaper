@@ -51,8 +51,9 @@ set(FLUTTER_MANAGED_DIR "${CMAKE_CURRENT_SOURCE_DIR}/flutter")
 add_subdirectory(${FLUTTER_MANAGED_DIR})
 
 # Application build; see runner/CMakeLists.txt.
-add_subdirectory("runner")
+# wallpaperEngine 需在 runner 之前，供 runner 链接 wallpaper_engine
 add_subdirectory("wallpaperEngine")
+add_subdirectory("runner")
 
 # Generated plugin build rules, which manage building the plugins and adding
 # them to the application.

@@ -1,12 +1,12 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../models/wallpaper_model.dart';
-import '../services/auth_service.dart';
+import '../services/drivenadapter.dart';
+import '../services/services.dart';
 
 /// 主页 ViewModel
 class HomeViewModel extends ChangeNotifier {
-  final AuthService _authService = AuthService();
+  final DrivenAuthService _authService = Services().getAuthService();
   final PageController carouselController = PageController();
   
   int _currentCarouselIndex = 0;
@@ -15,7 +15,7 @@ class HomeViewModel extends ChangeNotifier {
 
   int get currentCarouselIndex => _currentCarouselIndex;
   bool get showLoginBanner => _showLoginBanner;
-  bool get isLoggedIn => _authService.isLoggedIn;
+  bool get isLoggedIn => _authService.loginState == AuthState.loggedIn;
 
   int _selectedRecommendationIndex = 0;
   int get selectedRecommendationIndex => _selectedRecommendationIndex;
@@ -323,7 +323,7 @@ class HomeViewModel extends ChangeNotifier {
   }
 
   HomeViewModel() {
-    _authService.addListener(_onAuthStateChanged);
+    _authService.loginStateNotifier.addListener(_onAuthStateChanged);
     _startCarouselAutoPlay();
     loadHotWallpapers(); // 首次加载热门壁纸
   }
@@ -339,7 +339,7 @@ class HomeViewModel extends ChangeNotifier {
   void dispose() {
     _isDisposed = true;
     carouselController.dispose();
-    _authService.removeListener(_onAuthStateChanged);
+    _authService.loginStateNotifier.removeListener(_onAuthStateChanged);
     super.dispose();
   }
 

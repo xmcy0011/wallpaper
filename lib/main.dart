@@ -2,9 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 import 'utils/platform_utils.dart';
 import 'views/home.dart';
+import 'services/services.dart';
+import 'services/drivenadapter/auth_service.dart';
+import 'services/drivenadapter/download_service.dart';
+import 'services/dbaccess/db_system_settings.dart';
+import 'services/dbaccess/db_wallpaper_storage.dart';
+import 'services/enginewrap/wallpaper_engine_service.dart';
+import 'services/logics/storage.dart';
+import 'services/logics/player.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  initServices();
 
   // 仅在桌面平台启用自定义标题栏
   if (isDesktopPlatform) {
@@ -23,6 +33,29 @@ void main() async {
   }
 
   runApp(const MyApp());
+}
+
+void initServices() {
+  // dbaccess
+  Services().setSystemSettings(DBSystemSettingsImpl());
+  Services().setWallpaperStorage(DBWallpaperStorageImpl(Services().getSystemSettings()));
+  // drivenadapter
+  Services().setAuthService(DrivenAuthServiceImpl());
+  Services().setDownloadService(DownloadServiceImpl());
+  // enginewrap
+  Services().setWallpaperEngineService(WallpaperEngineServiceImpl());
+  // logics
+  Services().setStorageLogic( 
+    StorageLogicImpl(
+      Services().getSystemSettings(),
+      Services().getDownloadService(),
+      Services().getWallpaperStorage(),
+    ),
+  );
+  Services().setPlayerLogic(PlayerLogicImpl(
+    Services().getWallpaperEngineService(),
+    Services().getWallpaperStorage(),
+  ));
 }
 
 class MyApp extends StatelessWidget {
@@ -55,5 +88,3 @@ class MyApp extends StatelessWidget {
     );
   }
 }
-
-
