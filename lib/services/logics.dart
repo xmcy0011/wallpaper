@@ -21,6 +21,10 @@ abstract class StorageLogic {
     DownloadProgressCallback? onProgress,
     String? wallpaperId,
   });
+
+  /// 获取本地壁纸列表
+  /// [return] 本地壁纸列表，如果本地没有壁纸列表，则返回空列表
+  List<DBWallpaper> getLocalWallpaperList();
 }
 
 /// 播放器逻辑接口

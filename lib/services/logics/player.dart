@@ -26,11 +26,14 @@ class PlayerLogicImpl implements PlayerLogic {
 
     // 加载壁纸（使用完整路径）
     String fullPath = wallpaperStorage.getWallpaperFilePath(wallpaperId, wallpaper.file);
-    wallpaperEngineService.load(fullPath);
-    log('load wallpaper: $fullPath');
+    bool ok = await wallpaperEngineService.load(fullPath);
+    if (!ok) {
+      throw Exception('加载壁纸失败');
+    }
+    log('load wallpaper: $fullPath, ok: $ok');
 
     // 开始播放
-    wallpaperEngineService.play();
+    // wallpaperEngineService.play();
   }
 
   @override
