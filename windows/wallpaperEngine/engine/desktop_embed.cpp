@@ -1,6 +1,7 @@
 /**
  * @file desktop_embed.cpp
  * @brief 桌面背景嵌入实现 - WorkerW、Progman、SHELLDLL_DefView 关键逻辑
+ * 兼容 Windows 10 与 Windows 11
  */
 
 #include "desktop_embed.h"
@@ -12,9 +13,58 @@
 #define WS_EX_NOREDIRECTIONBITMAP 0x00200000L
 #endif
 
+#include <thread>
+#include <chrono>
+
 namespace engine {
 
-bool InitDesktopLayer(DesktopEmbedContext& ctx) {
+// RtlGetVersion 所需结构体（未文档化 API）
+typedef struct _RTL_OSVERSIONINFOW {
+    ULONG dwOSVersionInfoSize;
+    ULONG dwMajorVersion;
+    ULONG dwMinorVersion;
+    ULONG dwBuildNumber;
+    ULONG dwPlatformId;
+    WCHAR szCSDVersion[128];
+} RTL_OSVERSIONINFOW, *PRTL_OSVERSIONINFOW;
+
+// 检查是否为 Windows 11 及以上（build 22000+）
+static bool IsWindows11OrGreater() {
+    typedef LONG(WINAPI* RtlGetVersionPtr)(PRTL_OSVERSIONINFOW);
+    HMODULE hNtdll = GetModuleHandleW(L"ntdll.dll");
+    if (!hNtdll) return false;
+    auto RtlGetVersion = (RtlGetVersionPtr)GetProcAddress(hNtdll, "RtlGetVersion");
+    if (!RtlGetVersion) return false;
+    RTL_OSVERSIONINFOW osvi = {sizeof(osvi)};
+    if (RtlGetVersion(&osvi) != 0) return false;
+    return osvi.dwMajorVersion > 10 ||
+           (osvi.dwMajorVersion == 10 && osvi.dwBuildNumber >= 22000);
+}
+
+// 在指定父窗口下，找到 SHELLDLL_DefView 所属 WorkerW 后面的那个 WorkerW（壁纸目标）
+// 因存在多个 WorkerW，必须取 DefView 容器之后的那个，否则会找错
+static HWND FindEmptyWorkerWAfterDefView(HWND parent) {
+    if (!parent || !IsWindow(parent)) return nullptr;
+    HWND workerW = nullptr;
+    while ((workerW = FindWindowExW(parent, workerW, L"WorkerW", nullptr)) != nullptr) {
+        if (FindWindowExW(workerW, nullptr, L"SHELLDLL_DefView", nullptr)) {
+            // 找到 DefView 所属 WorkerW，返回其后的下一个 WorkerW
+            return FindWindowExW(parent, workerW, L"WorkerW", nullptr);
+        }
+    }
+    return nullptr;
+}
+
+// 查找壁纸目标 WorkerW，兼容 Desktop 与 Progman 两种父窗口结构
+static HWND FindEmptyWorkerWByEnum(HWND progman) {
+    HWND result = FindEmptyWorkerWAfterDefView(GetDesktopWindow());
+    if (!result && progman) {
+        result = FindEmptyWorkerWAfterDefView(progman);
+    }
+    return result;
+}
+
+bool initWin11DesktopLayer(DesktopEmbedContext& ctx) {
     ctx.progman = FindWindowW(L"Progman", nullptr);
     if (!ctx.progman) {
         return false;
@@ -53,6 +103,60 @@ bool InitDesktopLayer(DesktopEmbedContext& ctx) {
     }, reinterpret_cast<LPARAM>(&ctx));
 
     return ctx.workerW != nullptr;
+}
+
+bool initWin10DesktopLayer(DesktopEmbedContext& ctx) {
+    // 发送 0x052C 到 Progman，让系统创建 WorkerW（在桌面图标后面），如果已存在，无效果
+    SendMessageTimeoutW(ctx.progman, WM_SPAWN_WORKER, 0xD, 0x1,
+                        SMTO_NORMAL, 1000, nullptr);
+
+    // Win10: WorkerW 可能延迟创建，重试几次
+    const int maxRetries = 5;
+    const int retryMs = 50;
+
+    ctx.workerW = nullptr;
+    ctx.shellDLL_DefView = nullptr;
+
+    for (int retry = 0; retry < maxRetries && !ctx.workerW; ++retry) {
+        if (retry > 0) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(retryMs));
+        }
+
+        // Win10 传统模式：优先用枚举法找空 WorkerW（Desktop 与 Progman 双路径）
+        ctx.workerW = FindEmptyWorkerWByEnum(ctx.progman);
+        if (!ctx.workerW) {
+            EnumWindows([](HWND top, LPARAM param) -> BOOL {
+                auto* c = reinterpret_cast<DesktopEmbedContext*>(param);
+                HWND defView = FindWindowExW(top, nullptr, L"SHELLDLL_DefView", nullptr);
+                if (defView) {
+                    c->shellDLL_DefView = defView;
+                    // DefView 所在窗口(top)的父窗口下查找兄弟 WorkerW
+                    HWND parent = GetParent(top);
+                    if (parent) {
+                        c->workerW = FindWindowExW(parent, top, L"WorkerW", nullptr);
+                    }
+                    if (!c->workerW) {
+                        c->workerW = FindWindowExW(GetDesktopWindow(), top, L"WorkerW", nullptr);
+                    }
+                    if (!c->workerW && c->progman) {
+                        c->workerW = FindWindowExW(c->progman, top, L"WorkerW", nullptr);
+                    }
+                    return FALSE;
+                }
+                return TRUE;
+            }, reinterpret_cast<LPARAM>(&ctx));
+        }
+    }
+
+    return ctx.workerW != nullptr;
+}
+
+bool InitDesktopLayer(DesktopEmbedContext& ctx) {
+    bool isWin11 = IsWindows11OrGreater();
+    if (isWin11) {
+        return initWin11DesktopLayer(ctx);
+    }
+    return initWin10DesktopLayer(ctx);
 }
 
 bool AttachToDesktop(HWND hwnd, const DesktopEmbedContext& ctx, const RECT& rect) {

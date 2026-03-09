@@ -72,6 +72,73 @@ EnumWindows([](HWND top, LPARAM param) -> BOOL {
 0x000100EC "Program Manager" Progman
 ```
 
+### 2.3.1 Windows 10 兼容性要点
+
+Windows 10 与 Windows 11 的桌面窗口层级存在差异，需单独处理以保证兼容性。
+
+#### 1. 版本检测（避免误用 Win11 路径）
+
+仅当系统为 Windows 11（build ≥ 22000）时启用分层模式，Win10 强制使用传统 WorkerW 路径：
+
+```cpp
+// 使用 RtlGetVersion 获取真实系统版本（GetVersionEx 在 Win10+ 已废弃）
+typedef struct _RTL_OSVERSIONINFOW {
+    ULONG dwOSVersionInfoSize;
+    ULONG dwMajorVersion;
+    ULONG dwMinorVersion;
+    ULONG dwBuildNumber;
+    // ...
+} RTL_OSVERSIONINFOW, *PRTL_OSVERSIONINFOW;
+
+bool isWin11 = (dwMajorVersion > 10) || (dwMajorVersion == 10 && dwBuildNumber >= 22000);
+ctx.isRaisedDesktop = isWin11 && (exStyle & WS_EX_NOREDIRECTIONBITMAP);
+```
+
+#### 2. 查找 DefView 所属 WorkerW 之后的那个 WorkerW
+
+系统中存在多个 WorkerW，不能仅找「不包含 DefView 的任意一个」，必须**定位 DefView 所属 WorkerW，再取其后的下一个**，否则会找错：
+
+```cpp
+// 找到 DefView 所属 WorkerW，返回其后的下一个 WorkerW（壁纸目标）
+static HWND FindEmptyWorkerWAfterDefView(HWND parent) {
+    HWND workerW = nullptr;
+    while ((workerW = FindWindowExW(parent, workerW, L"WorkerW", nullptr)) != nullptr) {
+        if (FindWindowExW(workerW, nullptr, L"SHELLDLL_DefView", nullptr)) {
+            return FindWindowExW(parent, workerW, L"WorkerW", nullptr);
+        }
+    }
+    return nullptr;
+}
+// 优先 Desktop，失败则尝试 Progman
+result = FindEmptyWorkerWAfterDefView(GetDesktopWindow());
+if (!result && progman) result = FindEmptyWorkerWAfterDefView(progman);
+```
+
+#### 3. WM_SPAWN_WORKER 后的重试机制
+
+Win10 上 WorkerW 可能延迟创建，发送 `0x052C` 后需重试查找：
+
+```cpp
+const int maxRetries = 5;
+const int retryMs = 50;
+for (int retry = 0; retry < maxRetries && !ctx.workerW; ++retry) {
+    if (retry > 0) Sleep(retryMs);
+    ctx.workerW = FindEmptyWorkerWByEnum();
+    if (!ctx.workerW) {
+        // 备选：使用 2.3 的兄弟查找法
+    }
+}
+```
+
+#### 4. Win10 与 Win11 路径对比
+
+| 项目 | Windows 10 | Windows 11 |
+|------|------------|------------|
+| WorkerW 查找 | 枚举法优先，兄弟法备选 | Progman 子窗口 |
+| 壁纸父窗口 | WorkerW | Progman |
+| 窗口样式 | 无需 WS_CHILD/WS_EX_LAYERED | 需添加以配合分层模式 |
+| 刷新桌面 | 可调用 SPI_SETDESKWALLPAPER | 不刷新，否则会销毁 WorkerW |
+
 ### 2.4 Windows 11 分层 ShellView 模式
 
 从 Windows 11 起，微软引入了**分层桌面**（Raised Desktop）：

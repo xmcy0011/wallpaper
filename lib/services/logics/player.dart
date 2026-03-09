@@ -6,16 +6,20 @@ import 'dart:developer';
 class PlayerLogicImpl implements PlayerLogic {
   late WallpaperEngineService wallpaperEngineService;
   late DBWallpaperStorage wallpaperStorage;
+  bool _isInitialized = false;
 
-  PlayerLogicImpl(this.wallpaperEngineService, this.wallpaperStorage) {
-    wallpaperEngineService.create();
-    wallpaperEngineService.initialize();
-  }
+  PlayerLogicImpl(this.wallpaperEngineService, this.wallpaperStorage) {}
 
   String? _currentWallpaperId;
 
   @override
   Future<void> play(String wallpaperId) async {
+    if (!_isInitialized) {
+      _isInitialized = true;
+      wallpaperEngineService.create();
+      wallpaperEngineService.initialize();
+    }
+
     _currentWallpaperId = wallpaperId;
 
     // 读取本地壁纸信息

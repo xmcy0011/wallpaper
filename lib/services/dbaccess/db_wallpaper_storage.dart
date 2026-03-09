@@ -48,7 +48,9 @@ class DBWallpaperStorageImpl implements DBWallpaperStorage {
 
   @override
   String getWallpaperFilePath(String wallpaperId, String relativeFile) {
-    String dir = '${dbSystemSettings.getWallpaperPath()}/$wallpaperId';
+    // 获取当前目录
+    String currentDir = Directory.current.path;
+    String dir = '$currentDir/${dbSystemSettings.getWallpaperPath()}/$wallpaperId';
     return '$dir/$relativeFile';
   }
 }

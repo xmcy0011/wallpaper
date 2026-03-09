@@ -63,6 +63,19 @@ static void GetPrimaryMonitorBounds(RECT *out) {
   }
 }
 
+// 检查是否为 Windows 11 及以上（build 22000+）
+static bool IsWindows11OrGreater() {
+  typedef LONG(WINAPI* RtlGetVersionPtr)(PRTL_OSVERSIONINFOW);
+  HMODULE hNtdll = GetModuleHandleW(L"ntdll.dll");
+  if (!hNtdll) return false;
+  auto RtlGetVersion = (RtlGetVersionPtr)GetProcAddress(hNtdll, "RtlGetVersion");
+  if (!RtlGetVersion) return false;
+  RTL_OSVERSIONINFOW osvi = {sizeof(osvi)};
+  if (RtlGetVersion(&osvi) != 0) return false;
+  return osvi.dwMajorVersion > 10 ||
+         (osvi.dwMajorVersion == 10 && osvi.dwBuildNumber >= 22000);
+}
+
 } // namespace
 
 WebView2Engine::WebView2Engine() { userDataPath_ = GetTempUserDataPath(); }
@@ -224,9 +237,19 @@ bool WebView2Engine::CreateWebView2Window() {
   int w = desktop.right - desktop.left;
   int h = desktop.bottom - desktop.top;
 
-  hwnd_ = CreateWindowExW(WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE, kClassName, L"",
-                          WS_POPUP, desktop.left, desktop.top, w, h, nullptr,
-                          nullptr, wc.hInstance, this);
+  bool isWin11 = IsWindows11OrGreater();
+  if (isWin11) {
+      hwnd_ = CreateWindowExW(WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE, kClassName, L"", WS_POPUP, desktop.left, desktop.top,
+                              w, h, nullptr, nullptr, wc.hInstance, this);
+  } else {
+      // win10
+      // 参考其他壁纸软件：WS_EX_TOOLWINDOW(不显示任务栏) | WS_EX_NOACTIVATE | WS_EX_TRANSPARENT(透明)
+      // 标准样式：WS_POPUP(窗口样式) | WS_VISIBLE(可见) | WS_DISABLED(不可见) | WS_CLIPCHILDREN（嵌入 WorkerW 时正确裁剪）
+      constexpr DWORD kExStyle = WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE | WS_EX_TRANSPARENT;
+      constexpr DWORD kStyle = WS_POPUP | WS_VISIBLE | WS_DISABLED | WS_CLIPCHILDREN;
+      hwnd_ = CreateWindowExW(kExStyle, kClassName, L"", kStyle, desktop.left, desktop.top, w, h, nullptr, nullptr,
+                              wc.hInstance, this);
+  }
 
   // 获取WebView2目录（可选，nullptr 使用系统默认）
   // wchar_t modulePath[MAX_PATH];
