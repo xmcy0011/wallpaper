@@ -33,7 +33,7 @@ class PlayerLogicImpl implements PlayerLogic {
     log('load wallpaper: $fullPath, ok: $ok');
 
     // 开始播放
-    // wallpaperEngineService.play();
+    await wallpaperEngineService.play();
   }
 
   @override

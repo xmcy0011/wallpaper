@@ -25,6 +25,9 @@ std::wstring Utf8ToWstring(const std::string& utf8) {
 // 当前壁纸句柄（单例模式）
 WallpaperHandle g_wallpaper_handle = nullptr;
 
+// 桌面核心（用于将壁纸窗口嵌入桌面）
+DesktopCoreHandle g_desktop_core = nullptr;
+
 // 保持 MethodChannel 存活，否则回调会失效
 std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> g_wallpaper_channel;
 
@@ -48,6 +51,9 @@ void RegisterWallpaperEngineChannel(flutter::FlutterEngine* engine) {
           if (g_wallpaper_handle) {
             wallpaper_release(g_wallpaper_handle);
             g_wallpaper_handle = nullptr;
+          }
+          if (!g_desktop_core) {
+            g_desktop_core = desktop_core_create();
           }
           g_wallpaper_handle = wallpaper_create();
           result->Success(flutter::EncodableValue(g_wallpaper_handle != nullptr));
@@ -121,6 +127,14 @@ void RegisterWallpaperEngineChannel(flutter::FlutterEngine* engine) {
           }
           bool ok = wallpaper_load(g_wallpaper_handle, &wpath, display_ptr,
                                   nullptr, nullptr);
+          if (ok && g_desktop_core &&
+              !desktop_is_embed_window(wallpaper_get_handle(g_wallpaper_handle))) {
+            DisplayRect rect;
+            if (desktop_get_primary_monitor(rect)) {
+              desktop_embed_window(wallpaper_get_handle(g_wallpaper_handle),
+                                  g_desktop_core, &rect);
+            }
+          }
           result->Success(flutter::EncodableValue(ok));
           return;
         }
@@ -147,6 +161,10 @@ void RegisterWallpaperEngineChannel(flutter::FlutterEngine* engine) {
           if (g_wallpaper_handle) {
             wallpaper_release(g_wallpaper_handle);
             g_wallpaper_handle = nullptr;
+          }
+          if (g_desktop_core) {
+            desktop_core_release(g_desktop_core);
+            g_desktop_core = nullptr;
           }
           result->Success();
           return;
