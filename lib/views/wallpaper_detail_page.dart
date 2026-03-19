@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import '../viewmodels/wallpaper_detail_viewmodel.dart';
 import '../models/wallpaper_model.dart';
@@ -13,6 +15,7 @@ class WallpaperDetailPage extends StatefulWidget {
   final String? creatorAvatar;
   final bool isVip;
   final bool isSvip;
+  final bool isLocalFile;
 
   const WallpaperDetailPage({
     super.key,
@@ -24,6 +27,7 @@ class WallpaperDetailPage extends StatefulWidget {
     this.creatorAvatar,
     this.isVip = false,
     this.isSvip = false,
+    this.isLocalFile = false,
   });
 
   @override
@@ -156,27 +160,49 @@ class _WallpaperDetailPageState extends State<WallpaperDetailPage> {
                     child: Stack(
                       fit: StackFit.expand,
                       children: [
-                        Image.network(
-                          widget.imageUrl,
-                          width: double.infinity,
-                          height: double.infinity,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                  colors: [
-                                    widget.color,
-                                    widget.color.withOpacity(0.6),
-                                  ],
-                                ),
-                                borderRadius: BorderRadius.circular(12),
+                        widget.isLocalFile
+                            ? Image.file(
+                                File(widget.imageUrl),
+                                width: double.infinity,
+                                height: double.infinity,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                        colors: [
+                                          widget.color,
+                                          widget.color.withOpacity(0.6),
+                                        ],
+                                      ),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  );
+                                },
+                              )
+                            : Image.network(
+                                widget.imageUrl,
+                                width: double.infinity,
+                                height: double.infinity,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                        colors: [
+                                          widget.color,
+                                          widget.color.withOpacity(0.6),
+                                        ],
+                                      ),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  );
+                                },
                               ),
-                            );
-                          },
-                        ),
                         // 播放状态覆盖层
                         if (!_viewModel.isPlaying)
                           Container(

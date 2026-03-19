@@ -10,9 +10,9 @@ import '../drivenadapter.dart';
 class StorageLogicImpl implements StorageLogic {
   late DBSystemSettings dbSystemSettings;
   late DrivenDownloadService downloadService;
-  late DBWallpaperStorage wallpaperStorage;
+  late DBWallpaperStorage dbWallpaperStorage;
 
-  StorageLogicImpl(this.dbSystemSettings, this.downloadService, this.wallpaperStorage);
+  StorageLogicImpl(this.dbSystemSettings, this.downloadService, this.dbWallpaperStorage);
 
   /// 将图片URL转换为4K分辨率(3840x2160)，支持 picsum.photos 等格式
   String _build4KUrl(String url) {
@@ -59,7 +59,7 @@ class StorageLogicImpl implements StorageLogic {
       preview: "preview.png",
       type: type,
     );
-    await wallpaperStorage.addWallpaper(wallpaper);
+    await dbWallpaperStorage.addWallpaper(wallpaper);
     return id;
   }
 
@@ -83,35 +83,7 @@ class StorageLogicImpl implements StorageLogic {
   }
 
   @override
-  List<DBWallpaper> getLocalWallpaperList() {
-    Directory wallpaperPath = Directory(dbSystemSettings.getWallpaperPath());
-    if (!wallpaperPath.existsSync()) return [];
-    List<DBWallpaper> wallpapers = [];
-    for (var entry in wallpaperPath.listSync()) {
-      // 先解析 project.json 文件
-      String wallpaperId = entry.path.split('/').last;
-      String projectFilePath = '${dbSystemSettings.getWallpaperPath()}/$wallpaperId/project.json';
-      if (!File(projectFilePath).existsSync()) continue;
-    
-      String json = File(projectFilePath).readAsStringSync();
-      Map<String, dynamic> jsonMap = jsonDecode(json);
-      DBWallpaper wallpaper = DBWallpaper(
-        wallpaperId: jsonMap['wallpaperId'],
-        title: jsonMap['title'],
-        tags: (jsonMap['tags'] as List).map((e) => e.toString()).toList(),
-        description: jsonMap['description'],
-        file: jsonMap['file'] as String,
-        preview: jsonMap['preview'] as String,
-        type: DBWallpaperType.values.byName(jsonMap['type'] as String),
-      );
-
-      // 检查 preview 和 file 文件是否存在
-      String previewPath = '${dbSystemSettings.getWallpaperPath()}/$wallpaperId/${wallpaper.preview}';
-      String filePath = '${dbSystemSettings.getWallpaperPath()}/$wallpaperId/${wallpaper.file}';
-      if (!File(previewPath).existsSync() || !File(filePath).existsSync()) continue;
-
-      wallpapers.add(wallpaper);
-    }
-    return wallpapers;
+  Future<List<DBWallpaper>> getLocalWallpaperList() async {
+    return await dbWallpaperStorage.getWallpaperList();
   }
 }

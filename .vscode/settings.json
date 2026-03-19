@@ -13,7 +13,7 @@
     // [[clangd]]
     //
     "clangd.fallbackFlags": [
-        "-I${workspaceFolder}/build/vcpkg_installed/x64-windows/include",
+        "-I${workspaceFolder}/build/windows/x64/vcpkg_installed/x64-windows/include",
         "-I${workspaceFolder}/windows/flutter/ephemeral",
         "-I${workspaceFolder}/windows/flutter/ephemeral/cpp_client_wrapper/include",
         "-I${workspaceFolder}/**",
