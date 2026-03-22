@@ -40,6 +40,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   initServices();
+  await _bootstrapPlayerAutoPlay();
 
   // 仅在桌面平台启用自定义标题栏
   if (isDesktopPlatform) {
@@ -81,6 +82,17 @@ void initServices() {
     Services().getWallpaperEngineService(),
     Services().getWallpaperStorage(),
   ));
+}
+
+/// 启动时将本地壁纸全部加入自动播放列表并开始定时轮换
+Future<void> _bootstrapPlayerAutoPlay() async {
+  final player = Services().getPlayerLogic();
+  final storage = Services().getWallpaperStorage();
+  final list = await storage.getWallpaperList();
+  for (final w in list) {
+    player.add(w.wallpaperId);
+  }
+  await player.startAutoPlay();
 }
 
 class MyApp extends StatelessWidget {

@@ -36,20 +36,23 @@ class DBWallpaperStorageImpl implements DBWallpaperStorage {
 
       String json = File(projectFilePath).readAsStringSync();
       Map<String, dynamic> jsonMap = jsonDecode(json);
+      String preview = jsonMap['preview'] as String;
+      String file = jsonMap['file'] as String;
+
+      // 检查 preview 和 file 文件是否存在
+      String previewPath = '${dbSystemSettings.getWallpaperPath()}/$wallpaperId/$preview';
+      String filePath = '${dbSystemSettings.getWallpaperPath()}/$wallpaperId/$file';
+      if (!File(previewPath).existsSync() || !File(filePath).existsSync()) continue;
+
       DBWallpaper wallpaper = DBWallpaper(
         wallpaperId: jsonMap['wallpaperId'],
         title: jsonMap['title'],
         tags: (jsonMap['tags'] as List).map((e) => e.toString()).toList(),
         description: jsonMap['description'],
-        file: jsonMap['file'] as String,
-        preview: jsonMap['preview'] as String,
+        file: file,
+        preview: previewPath,
         type: DBWallpaperType.values.byName(jsonMap['type'] as String),
       );
-
-      // 检查 preview 和 file 文件是否存在
-      String previewPath = '${dbSystemSettings.getWallpaperPath()}/$wallpaperId/${wallpaper.preview}';
-      String filePath = '${dbSystemSettings.getWallpaperPath()}/$wallpaperId/${wallpaper.file}';
-      if (!File(previewPath).existsSync() || !File(filePath).existsSync()) continue;
 
       wallpapers.add(wallpaper);
     }

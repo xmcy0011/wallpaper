@@ -1,7 +1,8 @@
 import 'dart:io';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import '../services/services.dart';
-import 'wallpaper_detail_page.dart';
+import '../services/dbaccess.dart';
+import '../viewmodels/personal_center_viewmodel.dart';
 
 /// 个人中心页面 - 壁纸管理/个人内容中心
 /// 参考：本地壁纸、本地美化、我的上传、我的收藏、我的购买
@@ -12,61 +13,39 @@ class PersonalCenterPage extends StatefulWidget {
   State<PersonalCenterPage> createState() => _PersonalCenterPageState();
 }
 
-class _PersonalCenterPageState extends State<PersonalCenterPage> with SingleTickerProviderStateMixin {
+class _PersonalCenterPageState extends State<PersonalCenterPage> with TickerProviderStateMixin {
   late TabController _subTabController;
-  int _selectedTypeFilter = 0; // 全部/视频/互动/图片
-
-  final List<String> _subTabs = ['本地壁纸', '我的上传', '我的收藏', '我的购买'];
-
-  final List<String> _typeFilters = ['全部', '视频', '互动', '图片'];
-
-  List<Map<String, dynamic>> _wallpaperItems = [];
-  bool _isLoading = true;
+  late PersonalCenterViewModel _viewModel;
+  late AnimationController _playingPulseController;
 
   @override
   void initState() {
     super.initState();
-    _subTabController = TabController(length: _subTabs.length, vsync: this);
-    _loadLocalWallpapers();
+    _viewModel = PersonalCenterViewModel();
+    _subTabController = TabController(length: _viewModel.subTabs.length, vsync: this);
+    _playingPulseController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1300));
+    _viewModel.addListener(_syncPlaybackPulse);
+    _viewModel.loadLocalWallpapers();
+    _syncPlaybackPulse();
   }
 
-  Future<void> _loadLocalWallpapers() async {
-    setState(() => _isLoading = true);
-    try {
-      final list = await Services().getStorageLogic().getLocalWallpaperList();
-      final storage = Services().getWallpaperStorage();
-      final items = list.map((w) {
-        final previewPath = storage.getWallpaperFilePath(w.wallpaperId, w.preview);
-        return <String, dynamic>{
-          'wallpaperId': w.wallpaperId,
-          'title': w.title,
-          'subtitle': null,
-          'author': null,
-          'url': previewPath,
-          'isLocalFile': true,
-          'color': Colors.blue,
-          'hasQuestion': false,
-        };
-      }).toList();
-      if (mounted) {
-        setState(() {
-          _wallpaperItems = items;
-          _isLoading = false;
-        });
+  void _syncPlaybackPulse() {
+    final playing = _viewModel.currentPlayingWallpaperId != null;
+    if (playing) {
+      if (!_playingPulseController.isAnimating) {
+        _playingPulseController.repeat(reverse: true);
       }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _wallpaperItems = [];
-          _isLoading = false;
-        });
-      }
+    } else {
+      _playingPulseController.stop();
     }
   }
 
   @override
   void dispose() {
+    _viewModel.removeListener(_syncPlaybackPulse);
+    _playingPulseController.dispose();
     _subTabController.dispose();
+    _viewModel.dispose();
     super.dispose();
   }
 
@@ -81,7 +60,7 @@ class _PersonalCenterPageState extends State<PersonalCenterPage> with SingleTick
         Expanded(
           child: TabBarView(
             controller: _subTabController,
-            children: List.generate(_subTabs.length, (index) => _buildContentForTab(index)),
+            children: List.generate(_viewModel.subTabs.length, (index) => _buildContentForTab(index)),
           ),
         ),
       ],
@@ -103,7 +82,7 @@ class _PersonalCenterPageState extends State<PersonalCenterPage> with SingleTick
               indicatorColor: Colors.blue,
               dividerColor: Colors.transparent,
               dividerHeight: 0,
-              tabs: _subTabs.map((t) => Tab(text: t)).toList(),
+              tabs: _viewModel.subTabs.map((t) => Tab(text: t)).toList(),
             ),
           ),
           InkWell(
@@ -127,80 +106,85 @@ class _PersonalCenterPageState extends State<PersonalCenterPage> with SingleTick
   }
 
   Widget _buildFilterBar() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      color: const Color(0xff1a1a1a),
-      child: Row(
-        children: [
-          // 左侧：全部壁纸(1)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.blue.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(4),
-              border: Border.all(color: Colors.blue.withOpacity(0.5)),
-            ),
-            child: Text(
-              '全部壁纸(${_wallpaperItems.length})',
-              style: const TextStyle(color: Colors.blue, fontSize: 14, fontWeight: FontWeight.w500),
-            ),
-          ),
-          const SizedBox(width: 16),
-          // 分类筛选：全部 / 视频 / 互动 / 图片
-          ...List.generate(_typeFilters.length, (index) {
-            final isSelected = index == _selectedTypeFilter;
-            return Padding(
-              padding: const EdgeInsets.only(right: 12),
-              child: InkWell(
-                onTap: () => setState(() => _selectedTypeFilter = index),
+    return AnimatedBuilder(
+      animation: _viewModel,
+      builder: (context, _) {
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          color: const Color(0xff1a1a1a),
+          child: Row(
+            children: [
+              // 左侧：全部壁纸(n)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(color: Colors.blue.withOpacity(0.5)),
+                ),
                 child: Text(
-                  _typeFilters[index],
-                  style: TextStyle(
-                    color: isSelected ? Colors.blue : Colors.white.withOpacity(0.7),
-                    fontSize: 14,
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                  ),
+                  '全部壁纸(${_viewModel.wallpaperItems.length})',
+                  style: const TextStyle(color: Colors.blue, fontSize: 14, fontWeight: FontWeight.w500),
                 ),
               ),
-            );
-          }),
-          const Spacer(),
-          // 右侧：搜索、更多操作
-          OutlinedButton.icon(
-            onPressed: () {
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(const SnackBar(content: Text('搜索功能开发中'), backgroundColor: Color(0xff2a2a2a)));
-            },
-            icon: const Icon(Icons.search, size: 16, color: Colors.white70),
-            label: const Text('搜索', style: TextStyle(color: Colors.white70, fontSize: 13)),
-            style: OutlinedButton.styleFrom(
-              side: BorderSide(color: Colors.white.withOpacity(0.3)),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            ),
-          ),
-          const SizedBox(width: 8),
-          PopupMenuButton<String>(
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text('更多操作', style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 13)),
-                Icon(Icons.arrow_drop_down, color: Colors.white.withOpacity(0.8), size: 20),
-              ],
-            ),
-            onSelected: (value) {
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(SnackBar(content: Text('$value 功能开发中'), backgroundColor: const Color(0xff2a2a2a)));
-            },
-            itemBuilder: (context) => [
-              const PopupMenuItem(value: '批量删除', child: Text('批量删除')),
-              const PopupMenuItem(value: '批量应用', child: Text('批量应用')),
-              const PopupMenuItem(value: '导出', child: Text('导出')),
+              const SizedBox(width: 16),
+              // 分类筛选：全部 / 视频 / 互动 / 图片
+              ...List.generate(_viewModel.typeFilters.length, (index) {
+                final isSelected = index == _viewModel.selectedTypeFilter;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 12),
+                  child: InkWell(
+                    onTap: () => _viewModel.setSelectedTypeFilter(index),
+                    child: Text(
+                      _viewModel.typeFilters[index],
+                      style: TextStyle(
+                        color: isSelected ? Colors.blue : Colors.white.withOpacity(0.7),
+                        fontSize: 14,
+                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                      ),
+                    ),
+                  ),
+                );
+              }),
+              const Spacer(),
+              // 右侧：搜索、更多操作
+              OutlinedButton.icon(
+                onPressed: () {
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(const SnackBar(content: Text('搜索功能开发中'), backgroundColor: Color(0xff2a2a2a)));
+                },
+                icon: const Icon(Icons.search, size: 16, color: Colors.white70),
+                label: const Text('搜索', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(color: Colors.white.withOpacity(0.3)),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                ),
+              ),
+              const SizedBox(width: 8),
+              PopupMenuButton<String>(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('更多操作', style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 13)),
+                    Icon(Icons.arrow_drop_down, color: Colors.white.withOpacity(0.8), size: 20),
+                  ],
+                ),
+                onSelected: (value) {
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text('$value 功能开发中'), backgroundColor: const Color(0xff2a2a2a)));
+                },
+                itemBuilder: (context) => [
+                  const PopupMenuItem(value: '批量删除', child: Text('批量删除')),
+                  const PopupMenuItem(value: '批量应用', child: Text('批量应用')),
+                  const PopupMenuItem(value: '导出', child: Text('导出')),
+                ],
+              ),
             ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -208,10 +192,15 @@ class _PersonalCenterPageState extends State<PersonalCenterPage> with SingleTick
   Widget _buildContentForTab(int tabIndex) {
     switch (tabIndex) {
       case 0:
-        if (_isLoading) {
-          return const Center(child: CircularProgressIndicator(color: Colors.blue));
-        }
-        return _buildContentGrid(items: _wallpaperItems);
+        return AnimatedBuilder(
+          animation: _viewModel,
+          builder: (context, _) {
+            if (_viewModel.isLoading) {
+              return const Center(child: CircularProgressIndicator(color: Colors.blue));
+            }
+            return _buildContentGrid(items: _viewModel.wallpaperItems);
+          },
+        );
       case 1:
         return _buildEmptyState('我的上传', '暂无上传内容，快去上传你的壁纸吧');
       case 2:
@@ -238,7 +227,7 @@ class _PersonalCenterPageState extends State<PersonalCenterPage> with SingleTick
     );
   }
 
-  Widget _buildContentGrid({required List<Map<String, dynamic>> items}) {
+  Widget _buildContentGrid({required List<DBWallpaper> items}) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -257,17 +246,7 @@ class _PersonalCenterPageState extends State<PersonalCenterPage> with SingleTick
             itemCount: items.length,
             itemBuilder: (context, index) {
               final item = items[index];
-              return _buildWallpaperCard(
-                wallpaperId: item['wallpaperId'] as String? ?? 'personal_$index',
-                title: item['title'] as String,
-                subtitle: item['subtitle'] as String?,
-                author: item['author'] as String?,
-                imageUrl: item['url'] as String,
-                isLocalFile: item['isLocalFile'] as bool? ?? false,
-                color: item['color'] as Color,
-                hasQuestion: item['hasQuestion'] as bool,
-                index: index,
-              );
+              return _buildWallpaperCard(wallpaper: item);
             },
           ),
         ],
@@ -275,114 +254,143 @@ class _PersonalCenterPageState extends State<PersonalCenterPage> with SingleTick
     );
   }
 
-  Widget _buildWallpaperCard({
-    required String wallpaperId,
-    required String title,
-    required String? subtitle,
-    required String? author,
-    required String imageUrl,
-    required bool isLocalFile,
-    required Color color,
-    required bool hasQuestion,
-    required int index,
-  }) {
+  Widget _buildWallpaperCard({required DBWallpaper wallpaper}) {
+    final isPlaying = _viewModel.currentPlayingWallpaperId == wallpaper.wallpaperId;
     return InkWell(
-      onTap: () {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (context) => WallpaperDetailPage(
-              wallpaperId: wallpaperId,
-              title: title,
-              imageUrl: imageUrl,
-              color: color,
-              isLocalFile: isLocalFile,
-            ),
-          ),
-        );
-      },
+      onTap: () {},
       borderRadius: BorderRadius.circular(8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: isLocalFile
-                      ? Image.file(
-                          File(imageUrl),
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(colors: [color, color.withOpacity(0.6)]),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            );
-                          },
-                        )
-                      : Image.network(
-                          imageUrl,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(colors: [color, color.withOpacity(0.6)]),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            );
-                          },
-                        ),
-                ),
-                if (hasQuestion)
-                  Positioned(
-                    top: 8,
-                    left: 8,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.help_outline, size: 16, color: Colors.white.withOpacity(0.9)),
-                        const SizedBox(width: 4),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.5),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(subtitle ?? '无法应用?', style: const TextStyle(color: Colors.white, fontSize: 11)),
-                        ),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
+            child: isPlaying ? _buildPlayingWallpaperThumb(wallpaper) : _buildStaticWallpaperThumb(wallpaper),
           ),
           const SizedBox(height: 8),
           Text(
-            title,
+            wallpaper.title,
             style: const TextStyle(color: Colors.white, fontSize: 13),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
+          )
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStaticWallpaperThumb(DBWallpaper wallpaper) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: Image.file(
+        File(wallpaper.preview),
+        fit: BoxFit.cover,
+        width: double.infinity,
+        height: double.infinity,
+        errorBuilder: (context, error, stackTrace) {
+          return Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(colors: [Colors.blue, Colors.blue.withOpacity(0.6)]),
+              borderRadius: BorderRadius.circular(8),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  /// 正在播放：呼吸描边 + 角落波形动画
+  Widget _buildPlayingWallpaperThumb(DBWallpaper wallpaper) {
+    return AnimatedBuilder(
+      animation: _playingPulseController,
+      builder: (context, _) {
+        final pulse = _playingPulseController.value;
+        return Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              width: 2,
+              color: Color.lerp(Colors.blue.withOpacity(0.45), Colors.cyanAccent, pulse)!,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.blue.withOpacity(0.12 + 0.22 * pulse),
+                blurRadius: 6 + 10 * pulse,
+                spreadRadius: 0,
+              ),
+            ],
           ),
-          if (author != null) ...[
-            const SizedBox(height: 4),
-            Row(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: Stack(
+              fit: StackFit.expand,
               children: [
-                Icon(Icons.person_outline, size: 12, color: Colors.white.withOpacity(0.5)),
-                const SizedBox(width: 4),
-                Text(
-                  author,
-                  style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 12),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                Image.file(
+                  File(wallpaper.preview),
+                  fit: BoxFit.cover,
+                  width: double.infinity,
+                  height: double.infinity,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(colors: [Colors.blue, Colors.blue.withOpacity(0.6)]),
+                      ),
+                    );
+                  },
+                ),
+                Positioned(
+                  top: 6,
+                  right: 6,
+                  child: _PlayingWaveBadge(animation: _playingPulseController),
                 ),
               ],
             ),
-          ],
-        ],
-      ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// 角落波形指示（模拟「正在播放」）
+class _PlayingWaveBadge extends StatelessWidget {
+  const _PlayingWaveBadge({required this.animation});
+
+  final Animation<double> animation;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (context, _) {
+        final v = animation.value;
+        return DecoratedBox(
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.5),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: Colors.cyanAccent.withOpacity(0.6)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: List.generate(3, (i) {
+                final h = 4.0 + 9.0 * (0.5 + 0.5 * math.sin(v * 2 * math.pi + i * 1.1));
+                return Padding(
+                  padding: EdgeInsets.only(left: i == 0 ? 0 : 3),
+                  child: Container(
+                    width: 3,
+                    height: h,
+                    decoration: BoxDecoration(
+                      color: Colors.cyanAccent,
+                      borderRadius: BorderRadius.circular(1.5),
+                    ),
+                  ),
+                );
+              }),
+            ),
+          ),
+        );
+      },
     );
   }
 }

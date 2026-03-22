@@ -136,7 +136,8 @@ class WallpaperDetailViewModel extends ChangeNotifier {
       _isApplied = true;
       notifyListeners();
 
-      // 播放壁纸
+      playerLogic.add(wallpaperId);
+      // 播放壁纸（插队：立即切换并重新计时自动轮换）
       await playerLogic.play(wallpaperId);
     } catch (e) {
       _applyError = e.toString();
